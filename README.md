@@ -1,19 +1,19 @@
 # TXT — offline text editor and document vault
 
-**[Download TXT 1.0.2 preview APK](https://github.com/xjitroy/TXT-PAD/releases/download/preview-14/TXT-preview.apk)** · [Screenshots and animation video](https://github.com/xjitroy/TXT-PAD/releases/tag/preview-14)
+**[Versioned releases: signed APK, AAB and verification](https://github.com/xjitroy/TXT-PAD/releases)**
 
-Kotlin / Jetpack Compose Material 3. Android 8.0+ (API 26), target/compile API 35.
+Kotlin / Jetpack Compose Material 3. Android 8.0+ (API 26), target/compile API 36.
 The Android app declares no INTERNET or ACCESS_NETWORK_STATE permission. No analytics,
 ads, remote APIs, account requirement or cloud backup integration.
 
 ## Build
 
-Open this directory in Android Studio with JDK 17 or 21 and install Android SDK 35.
+Open this directory in Android Studio with JDK 17 or 21 and install Android SDK 36.
 Let Gradle sync, then run the `app` configuration. On Linux/macOS with curl, unzip
-and sha256sum: `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`.
+and sha256sum: `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintRelease`.
 The source-only bootstrap downloads and checksum-checks Gradle 8.11.1. Build dependencies
 need network on first sync; the installed app works offline. Alternatively use a local
-Gradle 8.11.1 installation. Release signing must use your own keystore.
+Gradle 8.11.1 installation. Production updates must reuse the stable TXT signing identity. See [RELEASING.md](docs/RELEASING.md); its private key is not in this repository.
 
 The [ordered source bundle](SOURCE_CODE.md) contains the nine requested files and the
 supporting RAM credential implementation. The full repository also includes resources,
@@ -36,8 +36,10 @@ Light/dark appearance follows Android, including system-bar icons. Material You 
 remain automatic on Android 12+. Animated light ribbons are sampled into frosted glass
 panels, with background-only Gaussian blur, directional reflections, inner highlights,
 soft shadows and spring press feedback. **Foreground text and icons never enter the blur
-node.** Android 8–11 uses a translucent fallback. Disabling system animation scale stops
-the moving mesh. Files / Vault / Trash has a bottom glass dock; the main editor toolbar
+node.** Android 8–11 uses a translucent fallback. Disabling system animation scale or Settings → Animated glass stops
+the moving mesh. Motion also stops while the app is in the background. Individual buttons
+have independent pressure/release and focus feedback; the writing surface is more opaque
+than the surrounding glass to protect reading contrast. Files / Vault / Trash has a bottom glass dock; the main editor toolbar
 floats above the keyboard. Tools contains font, wrap, line-number and storage controls.
 Home filters wrap, and large-font Backup/Workspace controls stack to keep labels readable.
 
@@ -121,17 +123,23 @@ providers. Recovery copies are retained if rollback fails. SAF modification time
 cannot generally be set; original times remain in the manifest, and vault times are restored.
 
 Verification results and exact build/release links are recorded in [VERIFICATION.json](VERIFICATION.json).
-[Build 41086574711](https://github.com/xjitroy/TXT-PAD/actions/runs/41086574711) passed compilation,
-crypto unit tests, lint and all **16 instrumented Android 15 tests**. The suite covers fallback light/dark/1.6× text, menus, root foreground
-contrast, editor tools, line-number/keyboard caret visibility, Undo/Redo location, typing
-during saving, default plain auto-save, encrypted auto-save, late IME commits on Back,
-RAM credential clearing, arbitrary extension output, rename and Trash round trips.
-[Release downloads](https://github.com/xjitroy/TXT-PAD/releases) include the preview APK,
-SHA-256, compositor screenshots and a real 8-second first-launch glass animation recording.
-Screenshots use synthetic text and the deterministic fallback palette; the animation uses
-emulator Material You colors. Real device accents vary.
+The instrumented suite runs on Android 8 (API 26) and Android 16 (API 36). It covers
+fallback light/dark/large text, menus, root foreground contrast, editor tools, line-number/
+keyboard caret visibility, Undo/Redo location, typing during saving, default plain auto-save,
+encrypted auto-save, late IME commits on Back, RAM credential clearing, arbitrary extension
+output, button feedback, native DOCX, archive conflicts/tampering/path rejection and Trash.
+Exact pass/fail results, build identifiers and release verification are recorded in
+[VERIFICATION.json](VERIFICATION.json); do not infer a result only from this coverage list.
 
-Physical-device/OEM behavior, screen-reader accessibility, cold-start, 120 Hz pacing and
-independent security review remain unverified. This is a debug-signed preview. Export a
-verified offline backup before uninstalling if Android rejects an update due to a changed
-debug signature. Stable production signing is still required for production distribution.
+The versioned release provides a minified, stably signed APK for direct installation and an
+AAB for Play Console, R8 mapping, signatures/checksums and store assets. See
+[Play submission files](docs/PLAY_STORE.md), [privacy policy](PRIVACY.md),
+[architecture](docs/ARCHITECTURE.md) and [future-agent handoff](docs/HANDOFF.md).
+The public repository contains no private signing key or password.
+
+Physical-device/OEM behavior, TalkBack workflows, cold-start and 120 Hz hardware performance
+and independent cryptographic review are not certified by emulator checks. Play Console
+account verification, app forms, testing requirements and review are completed by the owner.
+Older debug previews used different signing keys: before uninstalling one, export/verify
+an offline backup and restore needed Trash items. Future direct APK updates use the stable
+production certificate and increasing versionCode.

@@ -23,6 +23,9 @@ actual=re.search(r'Signer #1 certificate SHA-256 digest: ([0-9a-f]+)',verified).
 assert actual==expected,'APK signing certificate differs from the pinned public certificate'
 run(build/'zipalign','-c','-P','16','4',a.apk)
 assert 'jar verified' in run('jarsigner','-verify',a.aab)
+bundle_certificate=run('keytool','-J-Duser.language=en','-printcert','-jarfile',a.aab)
+bundle_digest=re.search(r'SHA256: ([0-9A-F:]+)',bundle_certificate).group(1).replace(':','').lower()
+assert bundle_digest==expected,'AAB signing certificate differs from the pinned public certificate'
 badging=run(build/'aapt2','dump','badging',a.apk)
 permissions=run(build/'aapt2','dump','permissions',a.apk)
 assert 'android.permission.INTERNET' not in permissions

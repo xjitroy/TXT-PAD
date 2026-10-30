@@ -1,0 +1,23 @@
+লেখার জন্য একটি পরিষ্কার পাতা, ব্যক্তিগত নথির জন্য নিজের নিয়ন্ত্রণে থাকা জায়গা।
+
+TXT দিয়ে অফলাইনে নোট, সাধারণ টেক্সট ও কোড লিখুন। DOCX-এর অনুচ্ছেদের লেখা পড়ুন ও সেভ করুন—কোনো অনলাইন অ্যাকাউন্ট লাগে না।
+
+সহজে লেখা
+• Auto-save ডিফল্টে অন।
+• Undo / Redo চাপলে পরিবর্তনের জায়গায় যায়।
+• Find & Replace-এ case-sensitive ও regex অপশন আছে।
+• Font size, font family, word wrap ও line numbers বেছে নিন।
+• Save As দিয়ে নিজের নাম ও .html, .php বা অন্য text extension ব্যবহার করুন।
+
+ফাইলের নিয়ন্ত্রণ
+Android-এর file picker দিয়ে workspace বাছুন। সাধারণ file manager থেকে আড়াল করতে private vault-এ ফাইল সরান। AES-256-GCM password protection দিন। চাইলে Android fingerprint বা screen-lock দিয়ে অ্যাপে প্রবেশের সুরক্ষা চালু করুন—এটি ডিফল্টে অফ। Trash থেকে ফাইল ফেরান বা স্থায়ীভাবে মুছুন।
+
+অফলাইন backup
+Workspace ও vault-এর সক্রিয় ফাইল নিয়ে password-encrypted .tpbak backup বানান। Master password দিয়ে restore করুন; একই নাম থাকলে Keep Both, Overwrite বা Skip বাছুন। Phone reset-এর আগে backup ফোনের বাইরে রাখুন। Lock করা ফাইলের নিজস্ব password backup-এর ভেতরেও থাকে।
+
+সহজপাঠ্য Liquid Glass
+শান্ত writing canvas, নড়াচড়া করা background light ও button feedback। Light/Dark mode Android-এর system অনুযায়ী বদলায়। Android 12+ এ Material You color ও backdrop blur আছে; পুরোনো ফোনে translucent fallback থাকে। TXT settings থেকে animation বন্ধ করা যায়।
+
+TXT-এর Internet permission নেই। বিজ্ঞাপন, analytics বা sign-in নেই। System file picker থেকে কোনো cloud provider বাছলে সেটি আলাদা সেবা—পুরোপুরি স্থানীয় কাজের জন্য local folder ব্যবহার করুন।
+
+DOCX-এর অনুচ্ছেদের লেখা রাখা হয়; Word-এর formatting, ছবি বা page layout রাখা হয় না। Password ভুলে গেলে উদ্ধার করা যায় না। Uninstall করলে private vault ও Trash মুছে যায়—আগে backup export করে যাচাই করুন। Private vault-এর app isolation কোনো compromised operating system-এর বিরুদ্ধে নিশ্চয়তা নয়।

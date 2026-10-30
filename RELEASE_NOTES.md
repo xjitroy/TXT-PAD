@@ -1,10 +1,10 @@
-TXT 1.0.2 — visible liquid glass and a stable writing surface
+TXT 1.1.0 — clearer writing, responsive glass and stable releases
 
-- Animated Material You light ribbons, frosted background-only blur on Android 12+, inset reflections, lens-like background magnification, soft elevation shadows and spring-driven press highlights. Text is always outside the blur layer. Older Android versions use a translucent fallback. This is an original Android implementation inspired by glass interfaces, not Apple's proprietary renderer.
-- Floating glass Files / Vault / Trash dock, glass New File action, bottom editor toolbar, glass sheets and dialogs, and animated list placement. System Light/Dark and animation-scale preferences remain supported.
-- Keyboard-aware caret scrolling: the current line stays within the resized editor viewport. Line numbers share the same vertical scroll owner. Typing remains enabled during auto-save.
-- Auto-save is on by default with a 1.5-second pause after typing. Unlocked encrypted documents can auto-save using a RAM-only sealed credential protected by AndroidKeyStore; mutable passwords are wiped after use. Sealed session data is erased when closing the document. No document password is stored on disk or exported in backups.
-- Visible one-tap Undo / Redo moves to and selects the changed region; history survives auto-save.
-- Save As prompts for any filename/extension (including .html, .php and custom names) and opens Android's destination picker. Password protection is selectable; DOCX saves preserve paragraph text only.
+- Independent button press/release springs, pressure highlights and focus feedback. Buttons no longer share one press state.
+- A refined Material You liquid backdrop with two flowing light ribbons, softer localized color and directional glass reflections. The writing page has a quieter, more opaque surface and an active-line guide. Foreground text never enters blur nodes.
+- Moving glass can be disabled in Settings, reacts to Android's animation scale and stops in the background. Reduced-motion navigation preserves the same controls and workflow.
+- Launch-window colors and system icons follow Light/Dark, including legacy Android resource qualifiers. Save-state labels use a short transition without wrapping away the editor viewport. The keyboard status line is compact.
+- Auto-save defaults on; Undo/Redo reveals changed text and survives saving. Custom filenames/extensions remain available in Tools → Save As.
+- SDK target 36, min Android 8. Minified release APK and AAB use a stable production certificate. Source, build workflows, privacy/listing assets, mapping, checksums and maintainer handoff are public; private signing material is delivered separately to the owner.
 
-DEBUG-SIGNED PREVIEW. Back up your vault and needed Trash files before any uninstall. Debug signatures can change between CI builds. Production signing, an independent security review and physical-device performance measurements remain outstanding.
+Back up private files before uninstalling an old debug preview: its signing key differs. Uninstalling erases the private vault and Trash. DOCX support keeps paragraph text, not formatting or images. Physical-device and Play Console policy/review checks remain necessary; no independent security audit or 120 Hz hardware certification is claimed.

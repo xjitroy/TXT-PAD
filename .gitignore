@@ -11,3 +11,5 @@ local.properties
 .env
 .env.*
 TXT-private*
+__pycache__/
+*.pyc

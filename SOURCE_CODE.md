@@ -1,8 +1,6 @@
 # TXT — nine requested source files in order
 
-Complete Android Studio project: configuration, resources, tests and build instructions are in this repository.
-
-The additional RAM credential implementation is included after the nine requested files.
+Full configuration, resources, tests and release instructions are in the repository.
 
 ## 1. app/build.gradle.kts
 
@@ -16,13 +14,13 @@ plugins {
 
 android {
     namespace = "com.secure.textpad"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.secure.textpad"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.2"
+        targetSdk = 36
+        versionCode = 4
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -31,8 +29,18 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    val signingPath = providers.environmentVariable("TXT_SIGNING_STORE").orNull
+    if (signingPath != null) {
+        signingConfigs.create("production") {
+            storeFile = file(signingPath)
+            storePassword = providers.environmentVariable("TXT_STORE_PASSWORD").get()
+            keyAlias = "txt-release"
+            keyPassword = providers.environmentVariable("TXT_KEY_PASSWORD").get()
+        }
+    }
     buildTypes {
         release {
+            if (signingPath != null) signingConfig = signingConfigs.getByName("production")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -144,6 +152,9 @@ package com.secure.textpad.ui.theme
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RadialGradient
@@ -188,6 +199,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.min
@@ -203,6 +217,32 @@ private class GlassScene(
     val mesh = MeshPainter(palette, dark)
 }
 private val LocalGlassScene = staticCompositionLocalOf<GlassScene?> { null }
+val LocalGlassMotionEnabled = staticCompositionLocalOf { false }
+enum class GlassStyle { Panel, Writing }
+
+@Composable
+private fun motionAllowed(requested: Boolean): Boolean {
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    fun animationScale() = runCatching {
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    }.getOrDefault(1f)
+    var scale by remember { mutableFloatStateOf(animationScale()) }
+    var started by remember(lifecycle) { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
+    DisposableEffect(context, lifecycle) {
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) { scale = animationScale() }
+        }
+        val stateObserver = LifecycleEventObserver { _, _ ->
+            started = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+            scale = animationScale()
+        }
+        context.contentResolver.registerContentObserver(Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false, observer)
+        lifecycle.addObserver(stateObserver)
+        onDispose { context.contentResolver.unregisterContentObserver(observer); lifecycle.removeObserver(stateObserver) }
+    }
+    return requested && scale > 0f && started
+}
 
 @Composable
 fun LiquidGlassTheme(
@@ -222,7 +262,9 @@ fun LiquidGlassTheme(
                 secondary = Color(0xFFB5D3C4), secondaryContainer = Color(0xFF304E43), onSecondaryContainer = Color(0xFFD0ECDD),
                 background = Color(0xFF101514), onBackground = Color(0xFFE4EAE6),
                 surface = Color(0xFF141A18), onSurface = Color(0xFFE4EAE6),
-                surfaceVariant = Color(0xFF3D4943), onSurfaceVariant = Color(0xFFC0CCC4)
+                surfaceVariant = Color(0xFF2B3932), onSurfaceVariant = Color(0xFFBFCDC5),
+                outline = Color(0xFF83988D), outlineVariant = Color(0xFF3F5147),
+                tertiary = Color(0xFF91C8DB), onTertiary = Color(0xFF003544)
             )
             else -> lightColorScheme(
                 primary = Color(0xFF006B53), onPrimary = Color.White,
@@ -230,14 +272,16 @@ fun LiquidGlassTheme(
                 secondary = Color(0xFF48665B), secondaryContainer = Color(0xFFCEEADD), onSecondaryContainer = Color(0xFF102C20),
                 background = Color(0xFFF5F8F6), onBackground = Color(0xFF17201B),
                 surface = Color(0xFFF9FCF9), onSurface = Color(0xFF17201B),
-                surfaceVariant = Color(0xFFDDE6DF), onSurfaceVariant = Color(0xFF414B44)
+                surfaceVariant = Color(0xFFDDE6DF), onSurfaceVariant = Color(0xFF414B44),
+                outline = Color(0xFF687C70), outlineVariant = Color(0xFFBCCDC2),
+                tertiary = Color(0xFF23677C), onTertiary = Color.White
             )
         }
     }
-    val motion = animateBackdrop && Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
+    val motion = motionAllowed(animateBackdrop)
     val phase: State<Float> = if (motion) {
         rememberInfiniteTransition(label = "liquid light").animateFloat(
-            0f, 6.283185f, infiniteRepeatable(tween(18000, easing = LinearEasing)), label = "reflections"
+            0f, 6.283185f, infiniteRepeatable(tween(22000, easing = LinearEasing)), label = "reflections"
         )
     } else remember { mutableFloatStateOf(0.7f) }
     val scene = remember(colors, darkTheme, motion, phase) { GlassScene(colors, darkTheme, motion, phase) }
@@ -251,7 +295,7 @@ fun LiquidGlassTheme(
         }
     }
     MaterialTheme(colorScheme = colors) {
-        CompositionLocalProvider(LocalGlassScene provides scene) {
+        CompositionLocalProvider(LocalGlassScene provides scene, LocalGlassMotionEnabled provides motion) {
             Surface(Modifier.fillMaxSize(), color = colors.background, contentColor = colors.onSurface) {
                 Box(Modifier.fillMaxSize().onSizeChanged { scene.dimensions.value = it }) {
                     MeshBackdrop(scene)
@@ -275,7 +319,7 @@ private class MeshPainter(private val colors: ColorScheme, private val dark: Boo
     fun draw(canvas: android.graphics.Canvas, width: Float, height: Float, phase: Float) {
         if (width <= 0 || height <= 0) return
         canvas.drawColor(colors.background.toArgb())
-        val radius = maxOf(width, height) * 0.69f
+        val radius = maxOf(width, height) * 0.55f
         val tints = listOf(colors.primary, colors.tertiary, colors.secondary)
         tints.forEachIndexed { index, tint ->
             val angle = phase + index * 2.094f
@@ -283,7 +327,7 @@ private class MeshPainter(private val colors: ColorScheme, private val dark: Boo
             val y = height * (0.47f + sin(angle) * 0.43f)
             paint.color = android.graphics.Color.WHITE
             paint.shader = RadialGradient(x, y, radius,
-                intArrayOf(tint.copy(alpha = if (dark) 0.48f else 0.25f).toArgb(), tint.copy(alpha = 0f).toArgb()),
+                intArrayOf(tint.copy(alpha = if (dark) 0.30f else 0.16f).toArgb(), tint.copy(alpha = 0f).toArgb()),
                 floatArrayOf(0f, 1f), Shader.TileMode.CLAMP)
             paint.style = Paint.Style.FILL
             canvas.drawCircle(x, y, radius, paint)
@@ -297,6 +341,13 @@ private class MeshPainter(private val colors: ColorScheme, private val dark: Boo
         paint.color = colors.primary.copy(alpha = if (dark) 0.21f else 0.13f).toArgb()
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = width * 0.12f
+        canvas.drawPath(ribbon, paint)
+        ribbon.reset()
+        val secondDrift = cos(phase) * height * 0.10f
+        ribbon.moveTo(-width * 0.15f, height * 0.70f - secondDrift)
+        ribbon.cubicTo(width * 0.35f, height * 1.02f, width * 0.55f, height * 0.05f, width * 1.15f, height * 0.26f + secondDrift)
+        paint.color = colors.tertiary.copy(alpha = if (dark) 0.13f else 0.08f).toArgb()
+        paint.strokeWidth = width * 0.08f
         canvas.drawPath(ribbon, paint)
         paint.style = Paint.Style.FILL
     }
@@ -350,9 +401,9 @@ private class FrostedBackdrop(private val blurRadius: Float) : BackdropLayer {
     override fun release() { node.discardDisplayList() }
 }
 
-fun Modifier.liquidGlass(interactionSource: MutableInteractionSource? = null): Modifier = liquidGlassCard(interactionSource)
+fun Modifier.liquidGlass(interactionSource: MutableInteractionSource? = null, style: GlassStyle = GlassStyle.Panel): Modifier = liquidGlassCard(interactionSource, style)
 
-fun Modifier.liquidGlassCard(interactionSource: MutableInteractionSource? = null): Modifier = composed {
+fun Modifier.liquidGlassCard(interactionSource: MutableInteractionSource? = null, style: GlassStyle = GlassStyle.Panel): Modifier = composed {
     val scene = LocalGlassScene.current
     val colors = MaterialTheme.colorScheme
     val origin = remember { mutableStateOf(Offset.Zero) }
@@ -364,7 +415,8 @@ fun Modifier.liquidGlassCard(interactionSource: MutableInteractionSource? = null
     DisposableEffect(layer) { onDispose { layer?.release() } }
     val shape = RoundedCornerShape(26.dp)
     val dark = scene?.dark ?: isSystemInDarkTheme()
-    shadow(18.dp, shape, clip = false,
+    val writing = style == GlassStyle.Writing
+    shadow(if (writing) 10.dp else 18.dp, shape, clip = false,
         ambientColor = Color.Black.copy(alpha = if (dark) 0.35f else 0.13f),
         spotColor = Color.Black.copy(alpha = if (dark) 0.48f else 0.20f))
         .onGloballyPositioned { origin.value = it.positionInRoot() }
@@ -380,14 +432,14 @@ fun Modifier.liquidGlassCard(interactionSource: MutableInteractionSource? = null
                     layer.draw(it.nativeCanvas, size, origin.value, scene, phase, pressure)
                 }
                 // The tint guarantees readable text while the moving light remains visible underneath.
-                drawRect(colors.surface.copy(alpha = if (layer == null) 0.88f else 0.72f))
+                drawRect(colors.surface.copy(alpha = if (writing) 0.96f else if (layer == null) 0.92f else 0.72f))
                 val shift = sin(phase) * size.width * 0.25f
                 drawRect(Brush.linearGradient(
-                    listOf(Color.White.copy(alpha = if (dark) 0.13f else 0.40f), Color.White.copy(alpha = 0.025f), Color.Transparent),
+                    listOf(Color.White.copy(alpha = if (writing) 0.015f else if (dark) 0.085f else 0.32f), Color.White.copy(alpha = 0.015f), Color.Transparent),
                     start = Offset(shift, 0f), end = Offset(size.width + shift, size.height * 0.8f)))
                 // A moving diagonal specular reflection and a bright inner rim create the lens edge.
                 drawRect(Brush.linearGradient(
-                    listOf(Color.Transparent, Color.White.copy(alpha = 0.06f + pressure * 0.12f), Color.Transparent),
+                    listOf(Color.Transparent, Color.White.copy(alpha = (if (writing) 0.012f else 0.08f) + pressure * 0.12f), Color.Transparent),
                     start = Offset(size.width * (0.35f + sin(phase) * 0.40f), 0f),
                     end = Offset(size.width * (0.8f + sin(phase) * 0.40f), size.height)))
                 drawRoundRect(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.45f + pressure * 0.18f), Color.White.copy(alpha = 0.06f))),
@@ -1168,6 +1220,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import com.secure.textpad.ui.theme.GlassButton as Button
+import com.secure.textpad.ui.theme.GlassTextButton as TextButton
+import com.secure.textpad.ui.theme.GlassOutlinedButton as OutlinedButton
+import com.secure.textpad.ui.theme.GlassTonalButton as FilledTonalButton
+import com.secure.textpad.ui.theme.GlassIconButton as IconButton
+import com.secure.textpad.ui.theme.GlassFilterChip as FilterChip
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -1180,6 +1239,7 @@ import androidx.compose.ui.unit.dp
 import com.secure.textpad.data.PadFile
 import com.secure.textpad.data.TrashItem
 import com.secure.textpad.ui.theme.liquidGlass
+import com.secure.textpad.ui.theme.glassPress
 import java.text.DateFormat
 import java.util.Date
 
@@ -1190,7 +1250,8 @@ fun HomeScreen(
     onOpen: (PadFile) -> Unit, onFolder: () -> Unit, onCreate: () -> Unit,
     onMove: (PadFile) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit,
     onPrivateDefault: (Boolean) -> Unit, onAppLock: (Boolean) -> Unit, onRefresh: () -> Unit,
-    onRename: (PadFile, String) -> Unit, onTrash: (PadFile) -> Unit, onShowTrash: () -> Unit
+    onRename: (PadFile, String) -> Unit, onTrash: (PadFile) -> Unit, onShowTrash: () -> Unit,
+    motionEnabled: Boolean = true, onMotionChange: (Boolean) -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -1225,10 +1286,9 @@ fun HomeScreen(
     }
     val colors = MaterialTheme.colorScheme
     val fabInteraction = remember { MutableInteractionSource() }
-    val dockInteraction = remember { MutableInteractionSource() }
-    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, contentColor = colors.onSurface,
+        Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, contentColor = colors.onSurface,
         floatingActionButton = {
-            FloatingActionButton(onClick = onCreate, modifier = Modifier.heightIn(min = 64.dp).widthIn(min = 160.dp).liquidGlass(fabInteraction),
+            FloatingActionButton(onClick = onCreate, modifier = Modifier.heightIn(min = 64.dp).widthIn(min = 160.dp).liquidGlass(fabInteraction).glassPress(fabInteraction),
                 containerColor = Color.Transparent, contentColor = colors.onSurface, interactionSource = fabInteraction,
                 elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)) {
                 Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1239,10 +1299,10 @@ fun HomeScreen(
         },
         bottomBar = {
             Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Row(Modifier.fillMaxWidth().liquidGlass(dockInteraction).padding(horizontal = 4.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    TextButton(onClick = { filter = 0; search = "" }, modifier = Modifier.weight(1f), interactionSource = dockInteraction) { Text("Files") }
-                    TextButton(onClick = { filter = 4 }, modifier = Modifier.weight(1f), interactionSource = dockInteraction) { Text("Vault") }
-                    TextButton(onClick = onShowTrash, modifier = Modifier.weight(1f), interactionSource = dockInteraction) { Text("Trash") }
+                Row(Modifier.fillMaxWidth().liquidGlass().padding(horizontal = 4.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    TextButton(onClick = { filter = 0; search = "" }, modifier = Modifier.weight(1f)) { Text("Files") }
+                    TextButton(onClick = { filter = 4 }, modifier = Modifier.weight(1f)) { Text("Vault") }
+                    TextButton(onClick = onShowTrash, modifier = Modifier.weight(1f)) { Text("Trash") }
                 }
             }
 
@@ -1261,7 +1321,6 @@ fun HomeScreen(
                         Text("TXT", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                         Text("Notes, documents & private files", color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     }
-                    TextButton(onClick = onShowTrash) { Icon(Icons.Outlined.DeleteOutline, null, Modifier.size(20.dp)); Text("Trash") }
                     IconButton(onClick = { settings = true }) { Icon(Icons.Outlined.Settings, "Settings") }
                 }
             }
@@ -1316,7 +1375,7 @@ fun HomeScreen(
             }
             items(visible, key = { it.uri.toString() }) { file ->
                 val interaction = remember(file.uri) { MutableInteractionSource() }
-                Row(Modifier.fillMaxWidth().animateItem().liquidGlass(interaction).clickable(interactionSource = interaction, indication = null, enabled = !busy) { onOpen(file) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().animateItem().liquidGlass(interaction).glassPress(interaction).clickable(interactionSource = interaction, indication = null, enabled = !busy) { onOpen(file) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), color = colors.primaryContainer) {
                         Icon(if (file.encrypted == true) Icons.Outlined.Lock else Icons.Outlined.Description,
                             null, Modifier.padding(10.dp).size(22.dp), tint = colors.onPrimaryContainer)
@@ -1373,6 +1432,7 @@ fun HomeScreen(
     }, confirmButton = { TextButton(onClick = { backup = false }) { Text("Close") } })
     if (settings) AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { settings = false }, title = { Text("TXT settings") }, text = {
         Column(Modifier.verticalScroll(rememberScrollState())) {
+            Row(verticalAlignment = Alignment.CenterVertically) { Text("Animated glass", Modifier.weight(1f)); Switch(motionEnabled, onMotionChange) }
             Text("Appearance follows your device’s Light / Dark setting.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) { Text("New files in private vault", Modifier.weight(1f)); Switch(defaultPrivate, onPrivateDefault) }
             Row(verticalAlignment = Alignment.CenterVertically) { Text("Fingerprint / screen lock", Modifier.weight(1f)); Switch(appLock, onAppLock) }
@@ -1440,6 +1500,10 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.EditText
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import com.secure.textpad.ui.theme.LocalGlassMotionEnabled
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -1462,8 +1526,17 @@ import androidx.compose.material.icons.automirrored.outlined.Redo
 import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import com.secure.textpad.ui.theme.GlassButton as Button
+import com.secure.textpad.ui.theme.GlassTextButton as TextButton
+import com.secure.textpad.ui.theme.GlassOutlinedButton as OutlinedButton
+import com.secure.textpad.ui.theme.GlassTonalButton as FilledTonalButton
+import com.secure.textpad.ui.theme.GlassIconButton as IconButton
+import com.secure.textpad.ui.theme.GlassFilterChip as FilterChip
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawBehind
+import com.secure.textpad.ui.theme.GlassStyle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.toArgb
@@ -1581,10 +1654,10 @@ fun EditorScreen(
     onSaveAs: (String, Boolean) -> Unit,
     onSensitivePrompt: (Boolean) -> Unit
 ) {
+    val motion = LocalGlassMotionEnabled.current
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) { if (doc.fresh) { focus.requestFocus(); keyboard?.show() } }
-    val toolbarInteraction = remember { MutableInteractionSource() }
     var saveAs by remember { mutableStateOf(false) }
     var fileName by remember { mutableStateOf("") }
     var saveAsEncrypted by remember { mutableStateOf(false) }
@@ -1628,7 +1701,10 @@ fun EditorScreen(
             IconButton(onClick = onBack, enabled = !busy && !saving) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back to files") }
             Column(Modifier.weight(1f)) {
                 Text(doc.file.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
-                Text(if (doc.saveFailure) "Save failed · use Save As" else if (saving) "Saving…" else if (busy) "Working…" else if (doc.dirty) "Unsaved changes" else "Saved on this device", style = MaterialTheme.typography.labelSmall)
+                val saveLabel = if (doc.saveFailure) "Save failed · use Save As" else if (saving) "Saving…" else if (busy) "Working…" else if (doc.dirty) "Unsaved changes" else "Saved on this device"
+                Crossfade(saveLabel, animationSpec = if (motion) tween(130) else snap(), label = "save status") { label ->
+                    Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
             IconButton(onClick = { doc.undo() }, enabled = !busy && doc.canUndo, modifier = Modifier.testTag("editor.undo")) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.AutoMirrored.Outlined.Undo, "Undo", Modifier.size(20.dp)); Text("Undo", style = MaterialTheme.typography.labelSmall) }
@@ -1676,6 +1752,7 @@ fun EditorScreen(
         val font = when (family) { 1 -> FontFamily.SansSerif; 2 -> FontFamily.Serif; else -> FontFamily.Monospace }
         val textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = size.sp, lineHeight = (size * 1.5f).sp, fontFamily = font)
         val gutterColor = MaterialTheme.colorScheme.onSurfaceVariant
+        val activeLineColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.055f)
         val margin = with(density) { 30.dp.toPx() }
         LaunchedEffect(doc.value.text, doc.value.selection, layout, viewport, imeBottom, wrap, numbers) {
             withFrameNanos { }
@@ -1697,7 +1774,7 @@ fun EditorScreen(
                 horizontal.scrollTo(x.roundToInt().coerceIn(0, horizontal.maxValue))
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth().padding(top = 8.dp).liquidGlass().padding(12.dp)
+        Box(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp).liquidGlass(style = GlassStyle.Writing).padding(horizontal = 18.dp, vertical = 20.dp)
             .testTag("editor.viewport").onSizeChanged { viewport = it }) {
             Row(Modifier.fillMaxWidth().verticalScroll(vertical).padding(bottom = 40.dp)) {
                 if (numbers) {
@@ -1727,7 +1804,19 @@ fun EditorScreen(
                     BasicTextField(value = doc.value, onValueChange = { doc.edit(it) },
                         modifier = Modifier.fillMaxWidth().widthIn(min = with(density) { fieldWidth.toDp() }).focusRequester(focus).defaultMinSize(minHeight = 240.dp).testTag("editor.input"),
                         readOnly = busy, textStyle = textStyle, cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        onTextLayout = { layout = it })
+                        onTextLayout = { layout = it },
+                        decorationBox = { input ->
+                            Box(Modifier.drawBehind {
+                                layout?.takeIf { it.layoutInput.text.text == doc.value.text }?.let { measured ->
+                                    val line = measured.getLineForOffset(doc.value.selection.end.coerceIn(0, doc.value.text.length))
+                                    drawRect(activeLineColor, topLeft = Offset(0f, measured.getLineTop(line)),
+                                        size = androidx.compose.ui.geometry.Size(this.size.width, measured.getLineBottom(line) - measured.getLineTop(line)))
+                                }
+                            }) {
+                                if (doc.value.text.isEmpty()) Text("Start writing…", style = textStyle.copy(color = gutterColor))
+                                input()
+                            }
+                        })
                 }
             }
         }
@@ -1735,14 +1824,14 @@ fun EditorScreen(
             Text("History change at character ${change.start + 1}" + if (change.collapsed) " · text removed" else " · changed text selected",
                 Modifier.padding(top = 4.dp, start = 8.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         }
-        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).liquidGlass(toolbarInteraction).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { save() }, enabled = !busy && !saving, interactionSource = toolbarInteraction) { Icon(Icons.Outlined.Save, null); Spacer(Modifier.width(5.dp)); Text("Save") }
-            TextButton(onClick = { password = true }, enabled = !busy && !saving, interactionSource = toolbarInteraction) { Icon(Icons.Outlined.Lock, null); Spacer(Modifier.width(5.dp)); Text("Lock") }
-            TextButton(onClick = { finding = !finding }, interactionSource = toolbarInteraction) { Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(5.dp)); Text("Find") }
-            TextButton(onClick = { tools = true }, interactionSource = toolbarInteraction) { Icon(Icons.Outlined.Tune, null); Text("Tools ⋯") }
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).liquidGlass().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { save() }, enabled = !busy && !saving) { Icon(Icons.Outlined.Save, null); Spacer(Modifier.width(5.dp)); Text("Save") }
+            TextButton(onClick = { password = true }, enabled = !busy && !saving) { Icon(Icons.Outlined.Lock, null); Spacer(Modifier.width(5.dp)); Text("Lock") }
+            TextButton(onClick = { finding = !finding }) { Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(5.dp)); Text("Find") }
+            TextButton(onClick = { tools = true }) { Icon(Icons.Outlined.Tune, null); Text("Tools ⋯") }
         }
-        Text("$stats\nUTF-8 · ${if (doc.encrypted) "Encrypted" else "Plain"} · ${if (doc.file.vault) "Private vault" else "Workspace"}",
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall)
+        Text("$stats${if (imeBottom > 0) " · " else "\n"}UTF-8 · ${if (doc.encrypted) "Encrypted" else "Plain"} · ${if (doc.file.vault) "Private vault" else "Workspace"}",
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall, maxLines = if (imeBottom > 0) 1 else 2, overflow = TextOverflow.Ellipsis)
     }
     if (password) PasswordDialog(title = if (doc.encrypted) "Password to save" else "Lock this document", confirm = !doc.encrypted,
         onDismiss = { password = false }, onSensitive = onSensitivePrompt,
@@ -1754,7 +1843,7 @@ fun EditorScreen(
                 TextButton(onClick = { doc.undo(); tools = false }, enabled = !busy && doc.canUndo) { Text("Undo") }
                 TextButton(onClick = { doc.redo(); tools = false }, enabled = !busy && doc.canRedo) { Text("Redo") }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) { Text("Word wrap", Modifier.weight(1f)); Switch(wrap, { wrap = it }) }
+            Row(verticalAlignment = Alignment.CenterVertically) { Text("Word wrap", Modifier.weight(1f)); Switch(wrap, { wrap = it }, modifier = Modifier.testTag("editor.wordWrap")) }
             Text("Comfort font size · ${size}sp")
             Slider(value = size.toFloat(), onValueChange = { size = it.toInt() }, valueRange = 12f..30f, steps = 17)
             TextButton(onClick = { tools = false; onMove() }, enabled = !busy && !saving && !doc.dirty) { Text(if (doc.file.vault) "Move to workspace" else "Isolate from other apps") }
@@ -1872,6 +1961,13 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import com.secure.textpad.ui.theme.GlassButton as Button
+import com.secure.textpad.ui.theme.GlassTextButton as TextButton
+import com.secure.textpad.ui.theme.GlassOutlinedButton as OutlinedButton
+import com.secure.textpad.ui.theme.GlassTonalButton as FilledTonalButton
+import com.secure.textpad.ui.theme.GlassIconButton as IconButton
+import com.secure.textpad.ui.theme.GlassFilterChip as FilterChip
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -1888,6 +1984,7 @@ import com.secure.textpad.ui.home.HomeScreen
 import com.secure.textpad.ui.home.TrashScreen
 import com.secure.textpad.ui.theme.LiquidGlassTheme
 import com.secure.textpad.ui.theme.liquidGlass
+import com.secure.textpad.ui.theme.LocalGlassMotionEnabled
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -2051,6 +2148,7 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
 
 class MainActivity : FragmentActivity() {
     private val prefs by lazy { getSharedPreferences("txt", MODE_PRIVATE) }
+    private var animateGlass by mutableStateOf(true)
     private var appLock by mutableStateOf(false)
     private var unlocked by mutableStateOf(true)
     private var incoming by mutableStateOf<Uri?>(null)
@@ -2060,10 +2158,11 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        animateGlass = prefs.getBoolean("animated_glass", true)
         appLock = prefs.getBoolean("app_lock", false)
         unlocked = !appLock
         incoming = externalUri(intent)
-        setContent { LiquidGlassTheme { App() } }
+        setContent { LiquidGlassTheme(animateBackdrop = animateGlass) { App() } }
     }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); incoming = externalUri(intent) }
     private fun externalUri(intent: Intent?): Uri? = if (intent?.action == Intent.ACTION_VIEW || intent?.action == Intent.ACTION_EDIT) intent?.data else null
@@ -2158,8 +2257,9 @@ class MainActivity : FragmentActivity() {
             }
             return
         }
+        val navigationMotion = LocalGlassMotionEnabled.current
         AnimatedContent(targetState = vm.editor, contentKey = { it?.sessionId ?: "home" }, label = "document expansion",
-            transitionSpec = { (fadeIn(tween(180)) + slideInVertically(animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.88f, stiffness = 420f), initialOffsetY = { it / 24 })).togetherWith(fadeOut(tween(120))) }) { doc ->
+            transitionSpec = { if (!navigationMotion) EnterTransition.None.togetherWith(ExitTransition.None) else (fadeIn(tween(180)) + slideInVertically(animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.88f, stiffness = 420f), initialOffsetY = { it / 24 })).togetherWith(fadeOut(tween(120))) }) { doc ->
             if (doc == null && vm.showTrash) TrashScreen(vm.trash, vm.busy,
                 onBack = { vm.showTrash = false }, onRestore = vm::restoreTrash, onDelete = vm::deleteTrash)
             else if (doc == null) HomeScreen(vm.files, vm.busy, vm.workspace, vm.defaultPrivate, appLock,
@@ -2169,7 +2269,8 @@ class MainActivity : FragmentActivity() {
                 onRestore = { restorePicker.launch(arrayOf("*/*")) },
                 onPrivateDefault = { vm.defaultPrivate = it; vm.repository.defaultPrivate = it },
                 onAppLock = { enable -> authenticate { appLock = enable; unlocked = true; prefs.edit().putBoolean("app_lock", enable).apply() } },
-                onRefresh = vm::refresh, onRename = vm::rename, onTrash = vm::trash, onShowTrash = { vm.showTrash = true; vm.refresh() })
+                onRefresh = vm::refresh, onRename = vm::rename, onTrash = vm::trash, onShowTrash = { vm.showTrash = true; vm.refresh() },
+                motionEnabled = animateGlass, onMotionChange = { animateGlass = it; prefs.edit().putBoolean("animated_glass", it).apply() })
             else EditorScreen(doc, vm.busy, saving = vm.saving, onBack = vm::back,
                 onSave = { e, p -> vm.save(e, p) }, onSaveAs = { name, encrypted -> saveAsEncrypted = encrypted; exportPicker.launch(name) }, onMove = { vm.move(doc.file) }, onSensitivePrompt = { sensitive = it })
         }
@@ -2209,6 +2310,109 @@ class MainActivity : FragmentActivity() {
         if (gateMessage != null && unlocked) AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { gateMessage = null }, title = { Text("Android authentication") }, text = { Text(gateMessage.orEmpty()) },
             confirmButton = { TextButton(onClick = { gateMessage = null }) { Text("OK") } })
     }
+}
+```
+
+## Supporting source: app/src/main/java/com/secure/textpad/ui/theme/GlassControls.kt
+
+```kotlin
+package com.secure.textpad.ui.theme
+
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.dp
+
+/** Per-control feedback; it never records or blurs foreground content. */
+fun Modifier.glassPress(source: MutableInteractionSource): Modifier = composed {
+    val pressed by source.collectIsPressedAsState()
+    val focused by source.collectIsFocusedAsState()
+    val motion = LocalGlassMotionEnabled.current
+    val amount = animateFloatAsState(if (pressed) 1f else 0f,
+        animationSpec = if (motion) spring(dampingRatio = 0.72f, stiffness = 600f) else snap(), label = "button pressure")
+    val accent = MaterialTheme.colorScheme.primary
+    graphicsLayer {
+        val pressure = if (motion) amount.value else 0f
+        scaleX = 1f - pressure * 0.035f
+        scaleY = 1f - pressure * 0.035f
+        translationY = pressure * 0.5.dp.toPx()
+    }.drawWithCache {
+        onDrawBehind {
+            val pressure = amount.value
+            if (pressure > 0.001f) drawRoundRect(
+                Brush.radialGradient(listOf(accent.copy(alpha = 0.20f * pressure), Color.Transparent),
+                    center = Offset(size.width * 0.5f, size.height * 0.35f), radius = maxOf(size.width, size.height)),
+                cornerRadius = CornerRadius(22.dp.toPx()))
+            if (focused) drawRoundRect(accent, cornerRadius = CornerRadius(22.dp.toPx()), style = Stroke(2.dp.toPx()))
+        }
+    }
+}
+
+@Composable
+fun GlassButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
+    interactionSource: MutableInteractionSource? = null, content: @Composable RowScope.() -> Unit) {
+    val source = interactionSource ?: remember { MutableInteractionSource() }
+    Button(onClick, modifier.heightIn(min = 48.dp).glassPress(source), enabled = enabled,
+        shape = RoundedCornerShape(18.dp), interactionSource = source, content = content)
+}
+
+@Composable
+fun GlassTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
+    interactionSource: MutableInteractionSource? = null, content: @Composable RowScope.() -> Unit) {
+    val source = interactionSource ?: remember { MutableInteractionSource() }
+    TextButton(onClick, modifier.heightIn(min = 48.dp).glassPress(source), enabled = enabled,
+        shape = RoundedCornerShape(18.dp), interactionSource = source,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), content = content)
+}
+
+@Composable
+fun GlassOutlinedButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit) {
+    val source = remember { MutableInteractionSource() }
+    OutlinedButton(onClick, modifier.heightIn(min = 48.dp).glassPress(source), enabled = enabled,
+        shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        interactionSource = source, content = content)
+}
+
+@Composable
+fun GlassTonalButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit) {
+    val source = remember { MutableInteractionSource() }
+    FilledTonalButton(onClick, modifier.heightIn(min = 48.dp).glassPress(source), enabled = enabled,
+        shape = RoundedCornerShape(18.dp), interactionSource = source, content = content)
+}
+
+@Composable
+fun GlassIconButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
+    content: @Composable () -> Unit) {
+    val source = remember { MutableInteractionSource() }
+    IconButton(onClick, modifier.glassPress(source), enabled = enabled, interactionSource = source, content = content)
+}
+
+@Composable
+fun GlassFilterChip(selected: Boolean, onClick: () -> Unit, label: @Composable () -> Unit,
+    modifier: Modifier = Modifier) {
+    val source = remember { MutableInteractionSource() }
+    FilterChip(selected, onClick, label, modifier.glassPress(source), interactionSource = source)
 }
 ```
 

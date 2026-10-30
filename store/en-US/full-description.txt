@@ -1,0 +1,27 @@
+A clear page for your words. A private place for your documents.
+
+TXT is an offline text editor with a password-protected document vault. Start a new note, edit code or plain text, or read and write the paragraph text in DOCX documents without an online account.
+
+WRITE COMFORTABLY
+• Auto-save is on by default.
+• Undo and Redo take you to the changed text.
+• Find and Replace includes case-sensitive and regular-expression options.
+• Adjust font size and family, word wrap and line numbers.
+• Save As with your own filename and extension, including HTML, PHP and custom text extensions.
+
+KEEP FILES UNDER YOUR CONTROL
+• Choose a workspace using Android's file picker.
+• Move files to the private app vault to hide them from ordinary file managers.
+• Add password protection using AES-256-GCM.
+• Optionally require Android fingerprint or device-screen-lock authentication to enter TXT.
+• Recover deleted files from Trash, or delete them permanently.
+
+BACK UP OFFLINE
+Create an encrypted .tpbak archive of your active workspace and vault. Restore it using its master password, with Keep Both, Overwrite or Skip for filename conflicts. Save the backup outside the phone before a reset. Locked files keep their own passwords inside the archive.
+
+CLEAR, ADAPTABLE APPEARANCE
+A liquid-glass interface with a calm writing surface, moving background light and button feedback. Light and dark modes follow Android. Material You colors and background blur are available on Android 12 and newer. Older devices use a translucent fallback. Animation can be turned off in TXT settings and follows Android's animation setting.
+
+TXT declares no Internet permission. There are no ads, analytics or sign-in requirements. A cloud provider you select in the Android file picker is a separate service; choose local folders for fully local storage.
+
+Please note: DOCX import/export keeps paragraph text, not Word formatting, images or page layout. Forgotten passwords cannot be recovered. Uninstalling removes the private vault and Trash, so export and verify a backup first. Private app isolation does not protect against a compromised operating system.
