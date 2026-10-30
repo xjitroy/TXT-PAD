@@ -32,7 +32,7 @@ assert 'android.permission.INTERNET' not in permissions
 assert 'android.permission.ACCESS_NETWORK_STATE' not in permissions
 version=re.search(r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'",badging)
 assert version and version.group(1)=='com.secure.textpad'
-assert re.search(r"sdkVersion:'26'",badging)
+assert re.search(r"(?:minSdkVersion|sdkVersion):'26'",badging)
 assert re.search(r"targetSdkVersion:'36'",badging)
 native=[]
 with zipfile.ZipFile(a.apk) as z:
