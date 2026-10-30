@@ -18,7 +18,18 @@ Gradle 8.11.1 installation. Release signing must use your own keystore.
 Choose a workspace folder. Tap **New File** to start typing. Back automatically names
 and saves a new plain draft using its first nonempty line or a timestamp. Existing
 documents ask before discarding unsaved edits. Save displays its state in the title bar.
-The main toolbar scrolls horizontally on small screens; Tools opens the extended controls.
+Light/dark appearance follows the Android system setting, including system-bar icons.
+Material You accents remain automatic on Android 12+. Foreground text is never blurred.
+Home filters wrap, and large-font Backup/Workspace controls stack instead of breaking words.
+The main editor toolbar scrolls horizontally on small screens; Tools opens extended controls.
+
+Each file's **⋮** menu provides Open, Rename, Move and Move to Trash. Rename keeps the
+current extension; Save As changes formats. Move transfers between the active workspace
+and private vault. Trash stores verified raw bytes in private app storage, preserving
+STXT encryption. Open Trash from the labelled header action to Restore or permanently
+Delete with confirmation. Restore keeps both files when names conflict; public files
+return to the active workspace. Trash is excluded from backups: restore needed files
+before exporting. Trash is removed on uninstall, together with the private vault.
 Tools → Save As creates a named copy in the current storage location in TXT, DOCX or STXT format.
 Move a saved file to the workspace to export it from the private vault.
 
@@ -82,13 +93,16 @@ back reported failures; it does not claim a distributed transaction across arbit
 providers. Recovery copies are retained if rollback fails. SAF modification timestamps
 cannot generally be set; original times remain in the manifest, and vault times are restored.
 
-GitHub Actions run [41014123255](https://github.com/xjitroy/TXT-PAD/actions/runs/41014123255)
-successfully executed `gradle :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`
-on commit `a020f64dd70363494fd159d8d7b8fbae2b3b498e`. The debug APK and SHA-256 file
-are published in [preview-2](https://github.com/xjitroy/TXT-PAD/releases/tag/preview-2).
-Source XML and manifest permission checks also passed. Crypto tests cover file round trips,
-password erasure, new salt/IV, wrong passwords, changed tags, chunk reordering, truncation,
-trailing data, and empty backups. Device/emulator flows, screen-reader accessibility,
-cold-start, 120 Hz pacing and independent security review remain unverified.
-This is a debug-signed preview; stable production signing and device QA are required
-before a production release. No bug-free or production certification is claimed.
+GitHub Actions run [41019504444](https://github.com/xjitroy/TXT-PAD/actions/runs/41019504444)
+successfully compiled the app/test APKs, ran crypto unit tests, Android lint, and seven
+instrumented Android 15 emulator tests on commit `231ad67b0963dd8da970dc43184c02bf7a7f6b1c`.
+[TXT 1.0.1 preview-7](https://github.com/xjitroy/TXT-PAD/releases/tag/preview-7) contains the
+APK, SHA-256 file and light/dark/large-text/editor screenshots. The screenshots were
+visually inspected after export. UI tests verify inherited theme foreground contrast,
+file-action menus, enlarged-text controls, editor tools, rename, plain-file Trash recovery,
+and preservation of password encryption after Trash restoration. Tests use synthetic data.
+Screenshots use the deterministic fallback palette; real Material You accents vary by device.
+Physical-device/OEM behavior, screen-reader accessibility, cold-start, 120 Hz pacing and
+independent security review remain unverified. This is a debug-signed preview. Export a
+verified offline backup before uninstalling if Android rejects an update due to a changed
+debug signature. Stable production signing is still required for production distribution.

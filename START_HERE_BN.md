@@ -2,9 +2,13 @@
 
 APK তৈরি হয়েছে এবং compilation, crypto unit tests ও lint পাস করেছে।
 
-সরাসরি ডাউনলোড: https://github.com/xjitroy/TXT-PAD/releases/download/preview-2/TXT-preview.apk
+সরাসরি ডাউনলোড: https://github.com/xjitroy/TXT-PAD/releases/download/preview-7/TXT-preview.apk
 
-এটি debug-signed preview; ফোনে বাস্তব পরীক্ষা এখনও বাকি।
+এটি TXT 1.0.1 debug-signed preview। Compilation, crypto tests, lint এবং Android 15 emulator-এ ৭টি পরীক্ষা পাস করেছে। বাস্তব ফোনে/OEM-এ পরীক্ষা এখনও বাকি।
+
+Light/Dark mode ফোনের System theme অনুযায়ী বদলায়। ফাইলের ⋮ মেনুতে Open, Rename, Move ও Move to Trash আছে। উপরের Trash থেকে Restore বা স্থায়ী Delete করা যায়। Trash backup-এ থাকে না—দরকারি ফাইল আগে restore করুন।
+
+আগের debug APK-তে নতুনটি ইনস্টল না হলে uninstall করার আগে যাচাই করা encrypted backup নিন। Uninstall করলে Private Vault ও Trash মুছে যায়।
 
 ## কম্পিউটার থাকলে — সবচেয়ে সহজ
 

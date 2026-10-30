@@ -6,11 +6,17 @@
   ],
   "nine_required_files": "present, ordered in SOURCE_CODE.md",
   "placeholders": "none in required sources",
-  "gradle_build": "PASS on GitHub Actions run 41014123255, commit a020f64dd70363494fd159d8d7b8fbae2b3b498e",
+  "gradle_build": "PASS: assembleDebug, assembleDebugAndroidTest, testDebugUnitTest, lintDebug",
   "junit": "PASS: :app:testDebugUnitTest",
-  "emulator": "not run",
+  "emulator": "PASS: 7 Android 15 x86_64 instrumented tests",
   "lint": "PASS: :app:lintDebug",
-  "apk": "https://github.com/xjitroy/TXT-PAD/releases/download/preview-2/TXT-preview.apk",
-  "sha256": "b9b588c628a226db54d218d2871448dc2ef8a99bf94a529ca2b5f73626eef4a6",
-  "production_signing": "not configured; debug-signed preview"
+  "apk": "https://github.com/xjitroy/TXT-PAD/releases/download/preview-7/TXT-preview.apk",
+  "sha256": "6978fa323dce6e401e9f70b339a78d6a7b0f95c4fdb3dca093a9ff20081ba3ee",
+  "production_signing": "not configured; debug-signed preview",
+  "workflow_run": 41019504444,
+  "commit": "231ad67b0963dd8da970dc43184c02bf7a7f6b1c",
+  "visual_review": "Inspected home light/dark, 1.6x text and editor screenshots; fixed large-text Workspace word wrapping",
+  "physical_devices": "not tested",
+  "security_audit": "not independently audited",
+  "performance_120hz": "not measured"
 }
