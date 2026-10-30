@@ -19,7 +19,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.core.graphics.ColorUtils
-import androidx.test.core.app.ApplicationProvider
+import androidx.test.platform.app.InstrumentationRegistry
 import com.secure.textpad.data.PadFile
 import com.secure.textpad.data.StorageRepository
 import com.secure.textpad.ui.editor.EditorDocument
@@ -50,8 +50,9 @@ class ThemeAndFileActionsTest {
     }
     private fun capture(name: String) {
         compose.waitForIdle()
-        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val destination = File(context.getExternalFilesDir(null), "qa").apply { mkdirs() }
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val destination = File(context.filesDir, "qa").apply { mkdirs() }
+        File(destination, "$name-semantics.txt").writeText(compose.onRoot().printToString())
         File(destination, "$name.png").outputStream().use {
             check(compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it))
         }
@@ -113,7 +114,7 @@ class ThemeAndFileActionsTest {
         compose.onNodeWithText("Comfort font size · 16sp").assertIsDisplayed()
     }
     @Test fun privateFileRenameTrashRestoreAndPermanentDelete() = runBlocking {
-        val repo = StorageRepository(ApplicationProvider.getApplicationContext())
+        val repo = StorageRepository(InstrumentationRegistry.getInstrumentation().targetContext)
         val token = "qa-${UUID.randomUUID()}"
         val text = "Offline file actions\nবাংলা"
         var file = repo.create("$token.txt", true)
@@ -132,7 +133,7 @@ class ThemeAndFileActionsTest {
         assertFalse(repo.listTrash().any { it.id == again.id })
     }
     @Test fun encryptedFileKeepsPasswordWhenRestoredFromTrash() = runBlocking {
-        val repo = StorageRepository(ApplicationProvider.getApplicationContext())
+        val repo = StorageRepository(InstrumentationRegistry.getInstrumentation().targetContext)
         var file = repo.create("qa-${UUID.randomUUID()}.stxt", true)
         file = repo.save(file, "Secret", true, "long unique password".toCharArray())
         repo.moveToTrash(file)

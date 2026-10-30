@@ -63,8 +63,13 @@ fun HomeScreen(
     val colors = MaterialTheme.colorScheme
     Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, contentColor = colors.onSurface,
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = onCreate, modifier = Modifier.heightIn(min = 64.dp).widthIn(min = 160.dp), containerColor = colors.primary, contentColor = colors.onPrimary,
-                icon = { Icon(Icons.Outlined.Add, null) }, text = { Text("New File", maxLines = 1, softWrap = false) })
+            FloatingActionButton(onClick = onCreate, modifier = Modifier.heightIn(min = 64.dp).widthIn(min = 160.dp),
+                containerColor = colors.primary, contentColor = colors.onPrimary) {
+                Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.Outlined.Add, null)
+                    Text("New File", style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
+                }
+            }
         }
     ) { padding ->
         // The complete header scrolls with the list on short screens / enlarged fonts.
