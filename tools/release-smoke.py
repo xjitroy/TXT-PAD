@@ -16,7 +16,10 @@ args = parser.parse_args()
 out = pathlib.Path(args.out); out.mkdir(parents=True, exist_ok=True)
 
 def adb(*parts, binary=False):
-    result = subprocess.run(['adb', *parts], check=True, capture_output=True, timeout=40)
+    result = subprocess.run(['adb', *parts], capture_output=True, timeout=40)
+    if result.returncode:
+        print(result.stdout.decode('utf-8',errors='replace'),result.stderr.decode('utf-8',errors='replace'),flush=True)
+        result.check_returncode()
     return result.stdout if binary else result.stdout.decode('utf-8', errors='replace')
 
 def tree():
@@ -72,9 +75,11 @@ def screenshot(name):
     (out/f'{name}.xml').write_text(ET.tostring(tree(), encoding='unicode'))
 
 def external():
-    uri = 'content://com.android.externalstorage.documents/document/' + urllib.parse.quote('primary:Documents/TXT-release-check.txt', safe='')
+    folder=urllib.parse.quote('primary:Documents/TXT-QA',safe='')
+    document=urllib.parse.quote('primary:Documents/TXT-QA/TXT-release-check.txt',safe='')
+    uri='content://com.android.externalstorage.documents/tree/'+folder+'/document/'+document
     adb('shell', 'am', 'start', '-W', '-a', 'android.intent.action.VIEW', '-d', uri,
-        '--grant-read-uri-permission', '--grant-write-uri-permission', '-n', 'com.secure.textpad/.MainActivity')
+        '-n', 'com.secure.textpad/.MainActivity')
 
 def wait_saved():
     locate('Saved on this device', timeout=45)
@@ -83,7 +88,7 @@ def wait_saved():
 def check_raw(predicate, timeout=45):
     deadline=time.monotonic()+timeout
     while time.monotonic()<deadline:
-        data=adb('exec-out','cat','/sdcard/Documents/TXT-release-check.txt',binary=True)
+        data=adb('exec-out','cat','/sdcard/Documents/TXT-QA/TXT-release-check.txt',binary=True)
         if predicate(data): return data
         time.sleep(.4)
     raise AssertionError('Saved document bytes did not reach the expected state')
@@ -98,8 +103,28 @@ screenshot('release-setup-dark')
 with tempfile.TemporaryDirectory() as tmp:
     fixture=pathlib.Path(tmp)/'TXT-release-check.txt'
     fixture.write_text('Release check\nA clear page for your ideas.\nEverything stays on this device.\n',encoding='utf-8')
-    adb('shell','mkdir','-p','/sdcard/Documents')
-    adb('push',str(fixture),'/sdcard/Documents/TXT-release-check.txt')
+    adb('shell','mkdir','-p','/sdcard/Documents/TXT-QA')
+    adb('push',str(fixture),'/sdcard/Documents/TXT-QA/TXT-release-check.txt')
+# Select the real workspace through SAF; no shell-granted URI permission shortcut.
+tap('Choose workspace folder')
+root=tree()
+rows=[n for n in root.iter('node') if n.get('text')=='Documents' and n.get('resource-id')=='android:id/title']
+if not rows:
+    tap('Show roots')
+    model=adb('shell','getprop','ro.product.model').strip()
+    root=tree()
+    candidates=[n for n in root.iter('node') if n.get('text') in {model,'Internal storage','Internal shared storage','Phone storage'}]
+    assert candidates,ET.tostring(root,encoding='unicode')
+    tap(node=candidates[0])
+    tap('Documents',scroll=True)
+else:
+    tap(node=rows[0])
+tap('TXT-QA',scroll=True)
+tap('Use this folder')
+root=tree()
+allows=[n for n in root.iter('node') if (n.get('text') or '').casefold()=='allow']
+if allows:tap(node=allows[0])
+locate('New File',timeout=45)
 external()
 locate('TXT-release-check.txt')
 field=locate(edit=True)
@@ -143,7 +168,12 @@ locate('Restored TXT-release-check.txt.');tap('OK')
 tap('‹ Back to documents')
 locate('TXT-release-check.txt')
 # Exercise the minified ZIP/JSON backup path through Android's destination picker.
+# A separate plain workspace file verifies both placement flags in a full backup.
+fixture=out/'workspace-check.txt';fixture.write_text('Workspace restore check',encoding='utf-8')
+adb('push',str(fixture),'/sdcard/Documents/TXT-QA/workspace-check.txt')
 tap('Backup');tap('Create full offline backup')
+locate(edit=True)
+tap('Show roots');tap('Downloads')
 picker_name=locate(edit=True).get('text')
 assert picker_name.startswith('TXT_Backup_') and picker_name.endswith('.tpbak')
 tap('Save')
@@ -164,7 +194,11 @@ except AssertionError:
     tap('Show roots');tap('Downloads');tap(picker_name,scroll=True)
 locate('Restore offline backup');tap('Enter master password')
 tap(edit=True);text('master-release-password');tap('Continue')
-locate('Restored 1 files. Skipped 0.',timeout=60);tap('OK')
+locate('Restored 2 files. Skipped 0.',timeout=60);tap('OK')
+with tempfile.TemporaryDirectory() as tmp:
+    copy=pathlib.Path(tmp)/'workspace-restored.txt'
+    adb('pull','/sdcard/Documents/TXT-QA/workspace-check (1).txt',str(copy))
+    assert copy.read_text()=='Workspace restore check'
 locate('TXT-release-check (1).txt',scroll=True)
 tap('TXT-release-check (1).txt')
 locate('Unlock TXT-release-check (1).txt')
@@ -195,5 +229,5 @@ adb('pull','/sdcard/TXT-release-motion.mp4',str(out/'TXT-release-motion.mp4'))
 crash=adb('logcat','-d','-b','crash')
 (out/'crash-log.txt').write_text(crash)
 assert 'FATAL EXCEPTION' not in crash
-(out/'RESULT.txt').write_text('PASS: signed minified APK install, external URI grants, UTF-8 auto-save, Undo/Redo disk results, STXT encryption, password re-open, private move, encrypted Trash/Restore, encrypted archive export and Keep Both restore through system pickers, system light/dark and real interaction recording.\n')
+(out/'RESULT.txt').write_text('PASS: signed minified APK install, persisted SAF workspace selection, tree URI routing, UTF-8 auto-save, Undo/Redo disk results, STXT encryption, password re-open, private move, encrypted Trash/Restore, encrypted archive export and Keep Both restore of workspace and vault through system pickers, system light/dark and real interaction recording.\n')
 print((out/'RESULT.txt').read_text())
