@@ -1,0 +1,88 @@
+name: Sign and publish TXT
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Must match versionName in app/build.gradle.kts (for example v1.1.1)
+        required: true
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require successful source checks and correct version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TXT_TAG: ${{ inputs.tag }}
+        run: |
+          python3 - <<'PY'
+          import json,os,pathlib,re,subprocess
+          version=re.search(r'versionName = "([^"]+)"',pathlib.Path('app/build.gradle.kts').read_text()).group(1)
+          assert os.environ['TXT_TAG']=='v'+version, 'Tag must match versionName'
+          response=subprocess.check_output(['gh','api',f'repos/{os.environ["GITHUB_REPOSITORY"]}/actions/runs?head_sha={os.environ["GITHUB_SHA"]}'])
+          runs=json.loads(response)['workflow_runs']
+          assert any(r['name']=='TXT checks' and r['conclusion']=='success' for r in runs), 'Run TXT checks successfully on this commit first'
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Build using the existing private signing key
+        env:
+          TXT_KEYSTORE_BASE64: ${{ secrets.TXT_KEYSTORE_BASE64 }}
+          TXT_STORE_PASSWORD: ${{ secrets.TXT_STORE_PASSWORD }}
+          TXT_KEY_PASSWORD: ${{ secrets.TXT_KEY_PASSWORD }}
+          TXT_SIGNING_STORE: ${{ runner.temp }}/TXT-release.p12
+        run: |
+          python3 - <<'PY'
+          import os,base64,pathlib
+          assert os.environ['TXT_KEYSTORE_BASE64'], 'Owner must configure TXT_KEYSTORE_BASE64, TXT_STORE_PASSWORD and TXT_KEY_PASSWORD in Actions secrets'
+          p=pathlib.Path(os.environ['TXT_SIGNING_STORE'])
+          p.write_bytes(base64.b64decode(os.environ['TXT_KEYSTORE_BASE64'],validate=True));p.chmod(0o600)
+          PY
+          gradle :app:assembleRelease :app:bundleRelease :app:testReleaseUnitTest :app:lintRelease --stacktrace
+      - name: Verify release artifacts
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk dist/TXT.apk
+          cp app/build/outputs/bundle/release/app-release.aab dist/TXT.aab
+          cp app/build/outputs/mapping/release/mapping.txt dist/mapping.txt
+          TXT_BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0" python3 tools/check-release.py dist/TXT.apk dist/TXT.aab --out dist/release-metadata.json
+          (cd dist && sha256sum TXT.apk TXT.aab > SHA256SUMS)
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: python3 tools/release-smoke.py --apk dist/TXT.apk --out release-proof
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TXT_TAG: ${{ inputs.tag }}
+        run: |
+          gh release create "$TXT_TAG" --target "$GITHUB_SHA" --title "TXT ${TXT_TAG#v}" --notes-file RELEASE_NOTES.md dist/TXT.apk dist/TXT.aab dist/mapping.txt dist/SHA256SUMS dist/release-metadata.json release/signing-certificate.pem release-proof/*.png release-proof/*.mp4
+      - name: Remove transient key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/TXT-release.p12"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TXT-release-proof
+          path: release-proof/
