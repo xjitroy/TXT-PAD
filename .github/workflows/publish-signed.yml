@@ -20,6 +20,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - run: sdkmanager 'build-tools;36.0.0'
       - name: Retrieve signed public files and require successful source checks
         env:
