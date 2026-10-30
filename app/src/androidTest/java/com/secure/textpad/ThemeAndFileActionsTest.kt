@@ -51,7 +51,8 @@ class ThemeAndFileActionsTest {
     private fun capture(name: String) {
         compose.waitForIdle()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val destination = File(context.filesDir, "qa").apply { mkdirs() }
+        val additionalOutput = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+        val destination = (additionalOutput?.let(::File) ?: File(context.filesDir, "qa")).apply { mkdirs() }
         File(destination, "$name-semantics.txt").writeText(compose.onRoot().printToString())
         File(destination, "$name.png").outputStream().use {
             check(compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it))

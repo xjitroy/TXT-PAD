@@ -62,4 +62,6 @@ jobs:
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk TXT-preview.apk
           sha256sum TXT-preview.apk > TXT-preview.apk.sha256
-          gh release create "preview-${{ github.run_number }}" TXT-preview.apk TXT-preview.apk.sha256 --target "${{ github.sha }}" --prerelease --title "TXT Preview ${{ github.run_number }}" --notes-file RELEASE_NOTES.md app/build/outputs/ui-screenshots/*.png
+          shopt -s nullglob
+          TXT_SCREENSHOTS=(app/build/outputs/ui-screenshots/*.png)
+          gh release create "preview-${{ github.run_number }}" TXT-preview.apk TXT-preview.apk.sha256 --target "${{ github.sha }}" --prerelease --title "TXT Preview ${{ github.run_number }}" --notes-file RELEASE_NOTES.md "${TXT_SCREENSHOTS[@]}"
