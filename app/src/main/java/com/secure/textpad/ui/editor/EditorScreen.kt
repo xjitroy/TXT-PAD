@@ -24,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
@@ -125,7 +126,7 @@ fun EditorScreen(
     var wrap by remember { mutableStateOf(true) }
     var numbers by remember { mutableStateOf(false) }
     var size by remember { mutableIntStateOf(16) }
-    var family by remember { mutableIntStateOf(0) }
+    var family by remember { mutableIntStateOf(1) }
     var tools by remember { mutableStateOf(false) }
     var finding by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -283,6 +284,9 @@ fun EditorScreen(
 @Composable
 fun PasswordDialog(title: String, confirm: Boolean = false, onDismiss: () -> Unit,
     onSensitive: (Boolean) -> Unit, onPassword: (CharArray) -> Unit) {
+    val ink = MaterialTheme.colorScheme.onSurface.toArgb()
+    val hintInk = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
+    val accent = MaterialTheme.colorScheme.primary.toArgb()
     var first by remember { mutableStateOf<EditText?>(null) }
     var second by remember { mutableStateOf<EditText?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -303,11 +307,17 @@ fun PasswordDialog(title: String, confirm: Boolean = false, onDismiss: () -> Uni
                     hint = "Password"; inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
                     setSingleLine(); setAutofillHints(View.AUTOFILL_HINT_PASSWORD); importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_YES
                     first = this
-                } }, modifier = Modifier.fillMaxWidth())
+                } }, update = { view ->
+                    view.setTextColor(ink); view.setHintTextColor(hintInk)
+                    view.backgroundTintList = android.content.res.ColorStateList.valueOf(accent)
+                }, modifier = Modifier.fillMaxWidth())
                 if (confirm) AndroidView(factory = { c -> EditText(c).apply {
                     hint = "Repeat password"; inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
                     setSingleLine(); importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO; second = this
-                } }, modifier = Modifier.fillMaxWidth())
+                } }, update = { view ->
+                    view.setTextColor(ink); view.setHintTextColor(hintInk)
+                    view.backgroundTintList = android.content.res.ColorStateList.valueOf(accent)
+                }, modifier = Modifier.fillMaxWidth())
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text("Cancel") }

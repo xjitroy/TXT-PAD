@@ -30,11 +30,14 @@ enum class ConflictPolicy { OVERWRITE, KEEP_BOTH, SKIP }
 @Serializable data class BackupItem(val entry: String, val path: String, val vault: Boolean, val modified: Long, val size: Long, val sha256: String)
 @Serializable data class BackupManifest(val version: Int = 1, val files: List<BackupItem>)
 data class RestoreResult(val restored: Int, val skipped: Int)
+@Serializable data class TrashItem(val id: String, val name: String, val path: String, val vault: Boolean,
+    val modified: Long, val deleted: Long, val size: Long, val sha256: String)
 
 class StorageRepository(private val context: Context) {
     private val resolver = context.contentResolver
     private val prefs = context.getSharedPreferences("txt", Context.MODE_PRIVATE)
     private val vaultRoot = File(context.filesDir, "secure_vault").apply { mkdirs() }
+    private val trashRoot = File(context.filesDir, "trash").apply { mkdirs() }
     private val workRoot = File(context.noBackupFilesDir, "operations").apply { mkdirs() }
     private val lock = Mutex()
     private val json = Json { ignoreUnknownKeys = false }
@@ -248,6 +251,76 @@ class StorageRepository(private val context: Context) {
             finally { stage.delete() }
         }
     }
+    suspend fun rename(file: PadFile, newName: String): PadFile = withContext(Dispatchers.IO) {
+        lock.withLock {
+            validateName(newName)
+            // Changing extensions can change the editor's export format; keep it explicit via Save As.
+            require(newName.substringAfterLast('.', "").equals(file.name.substringAfterLast('.', ""), true)) {
+                "Keep the same file extension when renaming. Use Save As to change format."
+            }
+            if (newName == file.name) return@withLock file
+            val path = file.path.substringBeforeLast('/', "").let { if (it.isEmpty()) newName else "$it/$newName" }
+            require(find(path, file.vault) == null) { "A file with that name already exists." }
+            val stage = temp("rename")
+            try {
+                input(file).use { src -> stage.outputStream().use { src.copyTo(it, 65536) } }
+                val target = createNow(path, file.vault, false)
+                writeNow(target, stage)
+                check(input(target).use(::hashStream) == digest(stage)) { "Rename verification failed. Original kept." }
+                deleteNow(file)
+                target.copy(size = stage.length(), encrypted = file.encrypted)
+            } finally { stage.delete() }
+        }
+    }
+
+    suspend fun listTrash(): List<TrashItem> = withContext(Dispatchers.IO) {
+        trashRoot.listFiles().orEmpty().filter { it.isDirectory && File(it, "item.json").isFile }.map { dir ->
+            val item = json.decodeFromString<TrashItem>(File(dir, "item.json").readText())
+            require(item.id == dir.name && File(dir, "content").isFile) { "Damaged Trash record. Keep app data for recovery." }
+            item
+        }.sortedByDescending { it.deleted }
+    }
+    private fun trashDirectory(id: String): File {
+        require(id.matches(Regex("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}")))
+        return File(trashRoot, id)
+    }
+    suspend fun moveToTrash(file: PadFile) = withContext(Dispatchers.IO) {
+        lock.withLock {
+            val id = UUID.randomUUID().toString()
+            val dir = trashDirectory(id).apply { check(mkdir()) }
+            val content = File(dir, "content")
+            var recorded = false
+            try {
+                input(file).use { src -> FileOutputStream(content).use { dst -> src.copyTo(dst, 65536); dst.fd.sync() } }
+                val hash = digest(content)
+                check(input(file).use(::hashStream) == hash) { "File changed during copy. Original kept." }
+                val item = TrashItem(id, file.name, file.path, file.vault, file.modified, System.currentTimeMillis(), content.length(), hash)
+                FileOutputStream(File(dir, "item.json")).use { it.write(json.encodeToString(item).toByteArray()); it.fd.sync() }
+                recorded = true
+                // The verified recovery copy and metadata exist before removing the original.
+                deleteNow(file)
+            } finally { if (!recorded) dir.deleteRecursively() }
+        }
+    }
+    suspend fun restoreTrash(id: String): PadFile = withContext(Dispatchers.IO) {
+        lock.withLock {
+            val dir = trashDirectory(id)
+            val item = json.decodeFromString<TrashItem>(File(dir, "item.json").readText())
+            require(item.id == id)
+            val content = File(dir, "content")
+            require(content.length() == item.size && digest(content) == item.sha256) { "Trash copy is damaged; original recovery data kept." }
+            val target = createNow(item.path, item.vault, true)
+            writeNow(target, content)
+            check(input(target).use(::hashStream) == item.sha256) { "Restore verification failed. Trash copy kept." }
+            if (item.vault) privateFile(target.path).setLastModified(item.modified.coerceAtLeast(0))
+            check(dir.deleteRecursively()) { "Restored file, but could not remove its Trash copy." }
+            target.copy(size = item.size)
+        }
+    }
+    suspend fun deleteTrashPermanently(id: String) = withContext(Dispatchers.IO) {
+        lock.withLock { check(trashDirectory(id).deleteRecursively()) { "Could not permanently delete this Trash item." } }
+    }
+
     private fun deleteNow(file: PadFile) {
         check(if (file.vault) privateFile(file.path).delete() else DocumentsContract.deleteDocument(resolver, file.uri)) { "Could not remove original file." }
     }

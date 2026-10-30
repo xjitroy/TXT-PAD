@@ -31,6 +31,7 @@ import androidx.lifecycle.viewModelScope
 import com.secure.textpad.data.*
 import com.secure.textpad.ui.editor.*
 import com.secure.textpad.ui.home.HomeScreen
+import com.secure.textpad.ui.home.TrashScreen
 import com.secure.textpad.ui.theme.LiquidGlassTheme
 import com.secure.textpad.ui.theme.liquidGlass
 import kotlinx.coroutines.launch
@@ -47,6 +48,8 @@ import javax.crypto.SecretKeyFactory
 class PadViewModel(app: Application) : AndroidViewModel(app) {
     val repository = StorageRepository(app)
     var files by mutableStateOf<List<PadFile>>(emptyList()); private set
+    var trash by mutableStateOf<List<TrashItem>>(emptyList()); private set
+    var showTrash by mutableStateOf(false)
     var editor by mutableStateOf<EditorDocument?>(null); private set
     var busy by mutableStateOf(false); private set
     var notice by mutableStateOf<String?>(null)
@@ -64,6 +67,7 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun refresh() = runOperation { reload() }
     private suspend fun reload() {
+        trash = repository.listTrash()
         files = repository.scan()
         // Publish the directory cursor results first; inspect magic bytes on I/O afterwards.
         val detected = ArrayList<PadFile>()
@@ -140,6 +144,14 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
         editor?.takeIf { it.file.uri == file.uri }?.let { it.file = moved }
         reload(); notice = if (moved.vault) "Moved to private vault." else "Moved to workspace."
     }
+    fun rename(file: PadFile, name: String) = runOperation {
+        val renamed = repository.rename(file, name)
+        editor?.takeIf { it.file.uri == file.uri }?.let { it.file = renamed }
+        reload()
+    }
+    fun trash(file: PadFile) = runOperation { repository.moveToTrash(file); reload(); notice = "Moved to Trash. You can restore it later." }
+    fun restoreTrash(item: TrashItem) = runOperation { repository.restoreTrash(item.id); reload(); notice = "Restored ${item.name}." }
+    fun deleteTrash(item: TrashItem) = runOperation { repository.deleteTrashPermanently(item.id); reload() }
     fun folder(uri: Uri) = runOperation { repository.chooseWorkspace(uri); workspace = true; reload() }
     fun backup(uri: Uri, password: CharArray) = runOperation {
         try { repository.backup(uri, password); notice = "Offline backup created. Keep it and its master password safe." }
@@ -227,7 +239,7 @@ class MainActivity : FragmentActivity() {
         val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { it?.let(vm::folder) }
         val backupPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { backupUri = it }
         val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { restoreUri = it }
-        val secure = vm.busy || sensitive || vm.editor?.encrypted == true || vm.unlockFile != null || !unlocked || backupUri != null || restorePassword
+        val secure = appLock || vm.busy || sensitive || vm.editor?.encrypted == true || vm.unlockFile != null || !unlocked || backupUri != null || restorePassword
         SideEffect {
             if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -258,15 +270,17 @@ class MainActivity : FragmentActivity() {
             return
         }
         AnimatedContent(targetState = vm.editor, contentKey = { it?.file?.uri?.toString() ?: "home" }, label = "document expansion",
-            transitionSpec = { (fadeIn(tween(200)) + scaleIn(tween(240), initialScale = 0.94f)).togetherWith(fadeOut(tween(120))) }) { doc ->
-            if (doc == null) HomeScreen(vm.files, vm.busy, vm.workspace, vm.defaultPrivate, appLock,
+            transitionSpec = { (fadeIn(tween(160))).togetherWith(fadeOut(tween(120))) }) { doc ->
+            if (doc == null && vm.showTrash) TrashScreen(vm.trash, vm.busy,
+                onBack = { vm.showTrash = false }, onRestore = vm::restoreTrash, onDelete = vm::deleteTrash)
+            else if (doc == null) HomeScreen(vm.files, vm.busy, vm.workspace, vm.defaultPrivate, appLock,
                 onOpen = { if (it.name.endsWith(".tpbak", true)) restoreUri = it.uri else vm.open(it) },
                 onFolder = { folderPicker.launch(vm.repository.workspace) }, onCreate = vm::newFile, onMove = vm::move,
                 onBackup = { backupPicker.launch("TXT_Backup_${SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())}.tpbak") },
                 onRestore = { restorePicker.launch(arrayOf("*/*")) },
                 onPrivateDefault = { vm.defaultPrivate = it; vm.repository.defaultPrivate = it },
                 onAppLock = { enable -> authenticate { appLock = enable; unlocked = true; prefs.edit().putBoolean("app_lock", enable).apply() } },
-                onRefresh = vm::refresh)
+                onRefresh = vm::refresh, onRename = vm::rename, onTrash = vm::trash, onShowTrash = { vm.showTrash = true; vm.refresh() })
             else EditorScreen(doc, vm.busy, onBack = vm::back,
                 onSave = { e, p -> vm.save(e, p) }, onSaveAs = vm::saveAs, onMove = { vm.move(doc.file) }, onSensitivePrompt = { sensitive = it })
         }

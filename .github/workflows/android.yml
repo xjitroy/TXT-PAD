@@ -25,6 +25,29 @@ jobs:
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - name: Compile, test and lint
         run: gradle :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --stacktrace
+      - name: Enable KVM for visual and file-operation tests
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Test light, dark, large text and Trash on Android 15
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            gradle :app:connectedDebugAndroidTest --stacktrace
+            mkdir -p app/build/outputs/ui-screenshots
+            adb pull /sdcard/Android/data/com.secure.textpad/files/qa/. app/build/outputs/ui-screenshots/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TXT-UI-screenshots
+          path: app/build/outputs/ui-screenshots/
       - uses: actions/upload-artifact@v4
         if: success()
         with:
@@ -42,4 +65,4 @@ jobs:
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk TXT-preview.apk
           sha256sum TXT-preview.apk > TXT-preview.apk.sha256
-          gh release create "preview-${{ github.run_number }}" TXT-preview.apk TXT-preview.apk.sha256 --target "${{ github.sha }}" --prerelease --title "TXT Preview ${{ github.run_number }}" --notes-file RELEASE_NOTES.md
+          gh release create "preview-${{ github.run_number }}" TXT-preview.apk TXT-preview.apk.sha256 --target "${{ github.sha }}" --prerelease --title "TXT Preview ${{ github.run_number }}" --notes-file RELEASE_NOTES.md app/build/outputs/ui-screenshots/*.png
