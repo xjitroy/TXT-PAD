@@ -49,5 +49,7 @@ remain authoritative and have not been run by this repository workflow. Use inte
 and device/pre-launch reports before promoting to production. New personal developer accounts
 may have additional testing/verification requirements shown by Play Console.
 
+Play Console uses the AAB, not the Android test APK or unsigned candidate.
+
 No Play account credentials or private signing keys belong in the public package. Actual Play
 publication, account forms, assigned rating and review approval are completed by the owner.

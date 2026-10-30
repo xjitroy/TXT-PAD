@@ -34,7 +34,7 @@ def locate(label=None, *, edit=False, timeout=25, scroll=False):
         root = tree()
         nodes = [n for n in root.iter('node') if
                  (not edit or n.get('class') == 'android.widget.EditText') and
-                 (label is None or label in (n.get('text'), n.get('content-desc')))]
+                 (label is None or label.casefold() in ((n.get('text') or '').casefold(), (n.get('content-desc') or '').casefold()))]
         nodes = [n for n in nodes if bounds(n)[2] > bounds(n)[0] and bounds(n)[3] > bounds(n)[1]]
         if nodes:
             return nodes[0]
@@ -140,6 +140,36 @@ locate('TXT-release-check.txt');tap('Restore')
 locate('Restored TXT-release-check.txt.');tap('OK')
 tap('‹ Back to documents')
 locate('TXT-release-check.txt')
+# Exercise the minified ZIP/JSON backup path through Android's destination picker.
+tap('Backup');tap('Create full offline backup')
+picker_name=locate(edit=True).get('text')
+assert picker_name.startswith('TXT_Backup_') and picker_name.endswith('.tpbak')
+tap('Save')
+locate('Backup master password')
+fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
+assert len(fields)==2
+for field in fields:
+    tap(node=field);text('master-release-password')
+tap('Continue')
+locate('Offline backup created. Keep it and its master password safe.',timeout=60);tap('OK')
+paths=adb('shell','find','/sdcard/Download','/sdcard/Documents','-name',picker_name).strip().splitlines()
+assert len(paths)==1
+assert adb('exec-out','cat',paths[0],binary=True).startswith(b'TPBK')
+tap('Backup');tap('Restore offline backup')
+try:
+    tap(picker_name,timeout=8,scroll=True)
+except AssertionError:
+    tap('Show roots');tap('Downloads');tap(picker_name,scroll=True)
+locate('Restore offline backup');tap('Enter master password')
+tap(edit=True);text('master-release-password');tap('Continue')
+locate('Restored 1 files. Skipped 0.',timeout=60);tap('OK')
+locate('TXT-release-check (1).txt',scroll=True)
+tap('TXT-release-check (1).txt')
+locate('Unlock TXT-release-check (1).txt')
+tap(edit=True);text('release-check-password');tap('Continue')
+wait_saved()
+assert 'Release typing' in ET.tostring(tree(),encoding='unicode')
+tap('Back to files')
 adb('shell','cmd','uimode','night','no')
 locate('TXT-release-check.txt')
 screenshot('release-home-light')
@@ -163,5 +193,5 @@ adb('pull','/sdcard/TXT-release-motion.mp4',str(out/'TXT-release-motion.mp4'))
 crash=adb('logcat','-d','-b','crash')
 (out/'crash-log.txt').write_text(crash)
 assert 'FATAL EXCEPTION' not in crash
-(out/'RESULT.txt').write_text('PASS: signed minified APK install, external URI grants, UTF-8 auto-save, Undo/Redo disk results, STXT encryption, password re-open, private move, encrypted Trash/Restore, system light/dark and real interaction recording.\n')
+(out/'RESULT.txt').write_text('PASS: signed minified APK install, external URI grants, UTF-8 auto-save, Undo/Redo disk results, STXT encryption, password re-open, private move, encrypted Trash/Restore, encrypted archive export and Keep Both restore through system pickers, system light/dark and real interaction recording.\n')
 print((out/'RESULT.txt').read_text())
