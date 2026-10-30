@@ -153,7 +153,7 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
                 if (!encrypted) doc.setSession(null)
                 else if (sealed != null) { doc.setSession(sealed); sealed = null }
                 files = (files.filterNot { it.uri == saved.uri } + saved).sortedByDescending { it.modified }
-                if (navigateAfter) {
+                if (navigateAfter && !doc.dirty) {
                     val action = pendingNavigation; pendingNavigation = null
                     doc.clear(); editor = null
                     viewModelScope.launch { kotlinx.coroutines.yield(); action?.invoke() }
@@ -164,6 +164,9 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
                 report(e)
             }
             finally { sealed?.clear(); actualPassword?.fill('\u0000'); password?.fill('\u0000'); saving = false; savingProtected = false }
+            // An IME can commit text after Back/Save has taken its snapshot.
+            // Save that newer revision too before leaving the document.
+            if (navigateAfter && editor === doc && doc.dirty && !doc.saveFailure) save(encrypted, null, true)
         }
     }
     fun move(file: PadFile) = runOperation {
@@ -338,7 +341,7 @@ class MainActivity : FragmentActivity() {
             else PasswordDialog("Backup master password", onDismiss = { restorePassword = false; restoreUri = null }, onSensitive = { sensitive = it },
                 onPassword = { restorePassword = false; restoreUri = null; vm.restore(uri, it, conflict) })
         }
-        if (vm.pendingNavigation != null && !saveBeforeLeaving) AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { vm.pendingNavigation = null }, title = { Text("Save your changes?") },
+        if (vm.pendingNavigation != null && !saveBeforeLeaving && !vm.saving) AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { vm.pendingNavigation = null }, title = { Text("Save your changes?") },
             text = { Text("Your latest edits have not been saved.") },
             confirmButton = { TextButton(onClick = { if (vm.editor?.encrypted == true) saveBeforeLeaving = true else vm.save(false, null, true) }) { Text("Save") } },
             dismissButton = { Row {

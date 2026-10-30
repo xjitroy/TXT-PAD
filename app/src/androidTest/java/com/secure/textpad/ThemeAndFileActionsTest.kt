@@ -328,6 +328,28 @@ class ThemeAndFileActionsTest {
             vm.repository.deleteTrashPermanently(vm.repository.listTrash().single { it.path == document.file.path }.id)
         }
     }
+    @Test fun saveBeforeLeavingKeepsTextCommittedAfterTheFirstSnapshot() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val vm = PadViewModel(context.applicationContext as Application)
+        compose.waitUntil(15000) { !vm.busy }
+        var document: EditorDocument? = null
+        var navigated = false
+        compose.runOnIdle {
+            vm.newFile()
+            document = vm.editor!!
+            document!!.edit(TextFieldValue("First snapshot"))
+            vm.pendingNavigation = { navigated = true }
+            vm.save(false, null, true)
+            document!!.edit(TextFieldValue("Last IME commit must survive Back"))
+        }
+        compose.waitUntil(15000) { navigated && vm.editor == null && !vm.saving }
+        runBlocking {
+            val file = document!!.file
+            assertEquals("Last IME commit must survive Back", vm.repository.readText(file))
+            vm.repository.moveToTrash(file)
+            vm.repository.deleteTrashPermanently(vm.repository.listTrash().single { it.path == file.path }.id)
+        }
+    }
     @Test fun saveAsWritesPhpAndArbitraryExtensionAsUtf8() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val repository = StorageRepository(context)

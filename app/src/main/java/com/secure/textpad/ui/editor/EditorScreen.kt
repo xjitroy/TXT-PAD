@@ -322,7 +322,7 @@ fun EditorScreen(
             Row(verticalAlignment = Alignment.CenterVertically) { Text("Word wrap", Modifier.weight(1f)); Switch(wrap, { wrap = it }) }
             Text("Comfort font size · ${size}sp")
             Slider(value = size.toFloat(), onValueChange = { size = it.toInt() }, valueRange = 12f..30f, steps = 17)
-            TextButton(onClick = { tools = false; onMove() }, enabled = !busy && !doc.dirty) { Text(if (doc.file.vault) "Move to workspace" else "Isolate from other apps") }
+            TextButton(onClick = { tools = false; onMove() }, enabled = !busy && !saving && !doc.dirty) { Text(if (doc.file.vault) "Move to workspace" else "Isolate from other apps") }
             Text("Save As", style = MaterialTheme.typography.labelLarge)
             Row {
                 TextButton(onClick = { tools = false; fileName = if (doc.fresh) "Untitled.txt" else doc.file.name; saveAsEncrypted = doc.encrypted; saveAs = true }, enabled = !busy) { Text("Save As…") }
