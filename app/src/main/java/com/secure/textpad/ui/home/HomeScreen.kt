@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -99,12 +100,13 @@ fun HomeScreen(
                             FilterChip(selected = filter == i, onClick = { filter = i }, label = { Text(title) })
                         }
                     }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { backup = true }, enabled = !busy, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                            Icon(Icons.Outlined.Backup, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Backup")
+                    val largeLabels = LocalDensity.current.fontScale > 1.25f
+                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { backup = true }, enabled = !busy, modifier = (if (largeLabels) Modifier.fillMaxWidth() else Modifier.weight(1f)).heightIn(min = 48.dp)) {
+                            Icon(Icons.Outlined.Backup, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Backup", maxLines = 1, softWrap = false)
                         }
-                        OutlinedButton(onClick = onFolder, enabled = !busy, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                            Icon(Icons.Outlined.FolderOpen, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Workspace")
+                        OutlinedButton(onClick = onFolder, enabled = !busy, modifier = (if (largeLabels) Modifier.fillMaxWidth() else Modifier.weight(1f)).heightIn(min = 48.dp)) {
+                            Icon(Icons.Outlined.FolderOpen, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Workspace", maxLines = 1, softWrap = false)
                         }
                     }
                 }
@@ -114,7 +116,7 @@ fun HomeScreen(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Documents", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        Text("${visible.size} files · On this device", color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                        Text("${visible.size} ${if (visible.size == 1) "file" else "files"} · On this device", color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     }
                     IconButton(onClick = onRefresh, enabled = !busy) { Icon(Icons.Outlined.Refresh, "Refresh file list") }
                 }
