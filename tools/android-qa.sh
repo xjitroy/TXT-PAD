@@ -38,8 +38,8 @@ if [ "$TXT_QA_EXIT" -eq 0 ]; then
     adb shell settings put global animator_duration_scale 1
     adb shell cmd uimode night yes
     adb shell am start -n com.secure.textpad/.MainActivity > /dev/null
-    sleep 2
-    adb shell screenrecord --time-limit 8 --bit-rate 2000000 --size 540x960 /sdcard/TXT-glass-motion.mp4 || true
+    sleep 6
+    adb shell screenrecord --time-limit 12 --bit-rate 2000000 --size 540x960 /sdcard/TXT-glass-motion.mp4 || true
     adb pull /sdcard/TXT-glass-motion.mp4 app/build/outputs/ui-screenshots/ || true
 fi
 exit "$TXT_QA_EXIT"

@@ -12,6 +12,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import com.secure.textpad.ui.theme.GlassButton as Button
+import com.secure.textpad.ui.theme.GlassTextButton as TextButton
+import com.secure.textpad.ui.theme.GlassOutlinedButton as OutlinedButton
+import com.secure.textpad.ui.theme.GlassTonalButton as FilledTonalButton
+import com.secure.textpad.ui.theme.GlassIconButton as IconButton
+import com.secure.textpad.ui.theme.GlassFilterChip as FilterChip
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.secure.textpad.data.PadFile
 import com.secure.textpad.data.TrashItem
 import com.secure.textpad.ui.theme.liquidGlass
+import com.secure.textpad.ui.theme.glassPress
 import java.text.DateFormat
 import java.util.Date
 
@@ -34,7 +42,8 @@ fun HomeScreen(
     onOpen: (PadFile) -> Unit, onFolder: () -> Unit, onCreate: () -> Unit,
     onMove: (PadFile) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit,
     onPrivateDefault: (Boolean) -> Unit, onAppLock: (Boolean) -> Unit, onRefresh: () -> Unit,
-    onRename: (PadFile, String) -> Unit, onTrash: (PadFile) -> Unit, onShowTrash: () -> Unit
+    onRename: (PadFile, String) -> Unit, onTrash: (PadFile) -> Unit, onShowTrash: () -> Unit,
+    motionEnabled: Boolean = true, onMotionChange: (Boolean) -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -69,10 +78,9 @@ fun HomeScreen(
     }
     val colors = MaterialTheme.colorScheme
     val fabInteraction = remember { MutableInteractionSource() }
-    val dockInteraction = remember { MutableInteractionSource() }
-    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, contentColor = colors.onSurface,
+        Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, contentColor = colors.onSurface,
         floatingActionButton = {
-            FloatingActionButton(onClick = onCreate, modifier = Modifier.heightIn(min = 64.dp).widthIn(min = 160.dp).liquidGlass(fabInteraction),
+            FloatingActionButton(onClick = onCreate, modifier = Modifier.heightIn(min = 64.dp).widthIn(min = 160.dp).liquidGlass(fabInteraction).glassPress(fabInteraction),
                 containerColor = Color.Transparent, contentColor = colors.onSurface, interactionSource = fabInteraction,
                 elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)) {
                 Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -83,10 +91,10 @@ fun HomeScreen(
         },
         bottomBar = {
             Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Row(Modifier.fillMaxWidth().liquidGlass(dockInteraction).padding(horizontal = 4.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    TextButton(onClick = { filter = 0; search = "" }, modifier = Modifier.weight(1f), interactionSource = dockInteraction) { Text("Files") }
-                    TextButton(onClick = { filter = 4 }, modifier = Modifier.weight(1f), interactionSource = dockInteraction) { Text("Vault") }
-                    TextButton(onClick = onShowTrash, modifier = Modifier.weight(1f), interactionSource = dockInteraction) { Text("Trash") }
+                Row(Modifier.fillMaxWidth().liquidGlass().padding(horizontal = 4.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    TextButton(onClick = { filter = 0; search = "" }, modifier = Modifier.weight(1f)) { Text("Files") }
+                    TextButton(onClick = { filter = 4 }, modifier = Modifier.weight(1f)) { Text("Vault") }
+                    TextButton(onClick = onShowTrash, modifier = Modifier.weight(1f)) { Text("Trash") }
                 }
             }
 
@@ -105,7 +113,6 @@ fun HomeScreen(
                         Text("TXT", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                         Text("Notes, documents & private files", color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     }
-                    TextButton(onClick = onShowTrash) { Icon(Icons.Outlined.DeleteOutline, null, Modifier.size(20.dp)); Text("Trash") }
                     IconButton(onClick = { settings = true }) { Icon(Icons.Outlined.Settings, "Settings") }
                 }
             }
@@ -160,7 +167,7 @@ fun HomeScreen(
             }
             items(visible, key = { it.uri.toString() }) { file ->
                 val interaction = remember(file.uri) { MutableInteractionSource() }
-                Row(Modifier.fillMaxWidth().animateItem().liquidGlass(interaction).clickable(interactionSource = interaction, indication = null, enabled = !busy) { onOpen(file) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().animateItem().liquidGlass(interaction).glassPress(interaction).clickable(interactionSource = interaction, indication = null, enabled = !busy) { onOpen(file) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), color = colors.primaryContainer) {
                         Icon(if (file.encrypted == true) Icons.Outlined.Lock else Icons.Outlined.Description,
                             null, Modifier.padding(10.dp).size(22.dp), tint = colors.onPrimaryContainer)
@@ -217,6 +224,7 @@ fun HomeScreen(
     }, confirmButton = { TextButton(onClick = { backup = false }) { Text("Close") } })
     if (settings) AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { settings = false }, title = { Text("TXT settings") }, text = {
         Column(Modifier.verticalScroll(rememberScrollState())) {
+            Row(verticalAlignment = Alignment.CenterVertically) { Text("Animated glass", Modifier.weight(1f)); Switch(motionEnabled, onMotionChange) }
             Text("Appearance follows your device’s Light / Dark setting.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) { Text("New files in private vault", Modifier.weight(1f)); Switch(defaultPrivate, onPrivateDefault) }
             Row(verticalAlignment = Alignment.CenterVertically) { Text("Fingerprint / screen lock", Modifier.weight(1f)); Switch(appLock, onAppLock) }

@@ -73,13 +73,15 @@ class ThemeAndFileActionsTest {
         // Semantics can be ready before SurfaceFlinger has presented the first GPU frame.
         // Require a committed frame, then reject uniform starting-window captures.
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val committed = java.util.concurrent.CountDownLatch(1)
-        instrumentation.runOnMainSync {
-            val decor = compose.activity.window.decorView
-            decor.viewTreeObserver.registerFrameCommitCallback { committed.countDown() }
-            decor.postInvalidateOnAnimation()
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            val committed = java.util.concurrent.CountDownLatch(1)
+            instrumentation.runOnMainSync {
+                val decor = compose.activity.window.decorView
+                decor.viewTreeObserver.registerFrameCommitCallback { committed.countDown() }
+                decor.postInvalidateOnAnimation()
+            }
+            assertTrue("The screenshot requires a presented app frame", committed.await(10, java.util.concurrent.TimeUnit.SECONDS))
         }
-        assertTrue("The screenshot requires a presented app frame", committed.await(10, java.util.concurrent.TimeUnit.SECONDS))
         var bitmap: Bitmap? = null
         val deadline = android.os.SystemClock.uptimeMillis() + 10000
         while (bitmap == null && android.os.SystemClock.uptimeMillis() < deadline) {
@@ -362,6 +364,105 @@ class ThemeAndFileActionsTest {
                 assertEquals(text, file.readText(Charsets.UTF_8))
             } finally { file.delete() }
         }
+    }
+
+    @Test fun twoTimesTextKeepsHomeControlsReachable() {
+        compose.setContent {
+            LiquidGlassTheme(darkTheme = false, dynamicColor = false, animateBackdrop = false) {
+                val d = LocalDensity.current
+                CompositionLocalProvider(LocalDensity provides Density(d.density, 2f)) {
+                    HomeScreen(listOf(sample), false, true, false, false,
+                        onOpen = {}, onFolder = {}, onCreate = {}, onMove = {}, onBackup = {}, onRestore = {},
+                        onPrivateDefault = {}, onAppLock = {}, onRefresh = {}, onRename = { _, _ -> }, onTrash = {}, onShowTrash = {})
+                }
+            }
+        }
+        compose.onNodeWithText("New File").assertIsDisplayed()
+        compose.onNodeWithText("Backup").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Workspace").performScrollTo().assertIsDisplayed()
+        capture("home-two-times-text")
+    }
+    @Test fun lightEditorAtTwoTimesTextCanOpenAndCloseTools() {
+        val document = EditorDocument(sample, "A quiet page for clear thinking.\nবাংলা লেখা।", false)
+        compose.setContent {
+            LiquidGlassTheme(darkTheme = false, dynamicColor = false, animateBackdrop = false) {
+                val d = LocalDensity.current
+                CompositionLocalProvider(LocalDensity provides Density(d.density, 2f)) {
+                    EditorScreen(document, false, onBack = {}, onSave = { _, _ -> }, onMove = {}, onSaveAs = { _, _ -> }, onSensitivePrompt = {})
+                }
+            }
+        }
+        capture("editor-light-large-text")
+        compose.onNodeWithText("Tools ⋯").performScrollTo().performClick()
+        compose.onNodeWithText("Done").performScrollTo().performClick()
+        compose.onNodeWithTag("editor.input").assertIsDisplayed()
+    }
+    @Test fun wordWrapOffRevealsTheEndOfALongCodeLine() {
+        val text = "val greeting = \"" + "hello ".repeat(150) + "\""
+        val document = EditorDocument(sample, text, false).apply { select(text.length, text.length) }
+        compose.setContent {
+            LiquidGlassTheme(animateBackdrop = false) {
+                EditorScreen(document, false, onBack = {}, onSave = { _, _ -> }, onMove = {}, onSaveAs = { _, _ -> }, onSensitivePrompt = {})
+            }
+        }
+        compose.onNodeWithText("Tools ⋯").performClick()
+        compose.onNodeWithTag("editor.wordWrap").performClick()
+        compose.onNodeWithText("Done").performScrollTo().performClick()
+        compose.waitForIdle()
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithTag("editor.input").performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        val node = compose.onNodeWithTag("editor.input").fetchSemanticsNode()
+        val viewport = compose.onNodeWithTag("editor.viewport").fetchSemanticsNode().boundsInRoot
+        val caret = layouts.single().getCursorRect(text.length).translate(node.positionInRoot)
+        assertTrue("Code caret must be inside the right edge: $caret in $viewport", caret.right <= viewport.right)
+        assertTrue("Code caret must be inside the left edge", caret.left >= viewport.left)
+    }
+    @Test fun glassMotionCanBeDisabledWithoutChangingButtonBehavior() {
+        var enabled by androidx.compose.runtime.mutableStateOf(false)
+        var active = true
+        var clicks = 0
+        compose.setContent {
+            LiquidGlassTheme(animateBackdrop = enabled) {
+                val allowed = com.secure.textpad.ui.theme.LocalGlassMotionEnabled.current
+                SideEffect { active = allowed }
+                com.secure.textpad.ui.theme.GlassTextButton(onClick = { clicks++; enabled = false }) { androidx.compose.material3.Text("Motion test") }
+            }
+        }
+        compose.runOnIdle { assertFalse(active) }
+        compose.onNodeWithText("Motion test").performClick()
+        compose.runOnIdle { assertEquals(1, clicks); assertFalse(active) }
+    }
+    @Test fun buttonPressAnimatesIndependentlyAndReleases() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        fun shell(command: String) { instrumentation.uiAutomation.executeShellCommand(command).use { android.os.ParcelFileDescriptor.AutoCloseInputStream(it).readBytes() } }
+        val old = android.provider.Settings.Global.getString(compose.activity.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE) ?: "1"
+        try {
+            shell("settings put global animator_duration_scale 1")
+            val source = androidx.compose.foundation.interaction.MutableInteractionSource()
+            var active = false
+            compose.setContent {
+                LiquidGlassTheme {
+                    val allowed = com.secure.textpad.ui.theme.LocalGlassMotionEnabled.current
+                    SideEffect { active = allowed }
+                    Box(Modifier.fillMaxSize()) {
+                        com.secure.textpad.ui.theme.GlassTextButton(onClick = {}, interactionSource = source,
+                            modifier = Modifier.testTag("motion.button")) { androidx.compose.material3.Text("Press animation") }
+                    }
+                }
+            }
+            compose.waitUntil(5000) { active }
+            compose.mainClock.autoAdvance = false
+            val before = compose.onNodeWithTag("motion.button").fetchSemanticsNode().boundsInRoot.width
+            val press = androidx.compose.foundation.interaction.PressInteraction.Press(Offset.Zero)
+            compose.runOnIdle { source.tryEmit(press) }
+            compose.mainClock.advanceTimeBy(200)
+            val during = compose.onNodeWithTag("motion.button").fetchSemanticsNode().boundsInRoot.width
+            assertTrue("The pressed button should compress", during < before)
+            compose.runOnIdle { source.tryEmit(androidx.compose.foundation.interaction.PressInteraction.Release(press)) }
+            compose.mainClock.advanceTimeBy(1000)
+            val after = compose.onNodeWithTag("motion.button").fetchSemanticsNode().boundsInRoot.width
+            assertEquals(before, after, 1f)
+        } finally { compose.mainClock.autoAdvance = true; shell("settings put global animator_duration_scale $old") }
     }
 
 }

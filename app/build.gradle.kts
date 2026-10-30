@@ -7,13 +7,13 @@ plugins {
 
 android {
     namespace = "com.secure.textpad"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.secure.textpad"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.2"
+        targetSdk = 36
+        versionCode = 4
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -22,8 +22,18 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    val signingPath = providers.environmentVariable("TXT_SIGNING_STORE").orNull
+    if (signingPath != null) {
+        signingConfigs.create("production") {
+            storeFile = file(signingPath)
+            storePassword = providers.environmentVariable("TXT_STORE_PASSWORD").get()
+            keyAlias = "txt-release"
+            keyPassword = providers.environmentVariable("TXT_KEY_PASSWORD").get()
+        }
+    }
     buildTypes {
         release {
+            if (signingPath != null) signingConfig = signingConfigs.getByName("production")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

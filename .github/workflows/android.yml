@@ -1,13 +1,17 @@
-name: Build TXT APK
+name: TXT checks
 on:
   workflow_dispatch:
   push:
     branches: [main]
   pull_request:
 permissions:
-  contents: write
+  contents: read
 jobs:
-  debug-apk:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [26, 36]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,18 +26,18 @@ jobs:
         with:
           gradle-version: '8.11.1'
       - name: Install compile SDK
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
-      - name: Compile, test and lint
-        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug --stacktrace
-      - name: Enable KVM for visual and file-operation tests
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Compile, unit test, lint and shrink release
+        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintRelease :app:assembleRelease :app:bundleRelease --stacktrace
+      - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Test light, dark, large text and Trash on Android 15
+      - name: Theme, editor, archive and file-operation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: ${{ matrix.api }}
           target: google_apis
           arch: x86_64
           profile: pixel_2
@@ -43,25 +47,46 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: TXT-UI-screenshots
+          name: TXT-UI-api-${{ matrix.api }}
           path: app/build/outputs/ui-screenshots/
-      - uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: TXT-debug-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: TXT-check-reports
+          name: TXT-reports-api-${{ matrix.api }}
           path: app/build/reports/
-      - name: Publish tested preview APK
-        if: github.event_name != 'pull_request'
+      - uses: actions/upload-artifact@v4
+        if: success() && matrix.api == 36
+        with:
+          name: TXT-unsigned-release
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+            app/build/outputs/mapping/release/
+  candidate:
+    if: github.event_name != 'pull_request'
+    needs: verify
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: TXT-unsigned-release
+          path: unsigned
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: TXT-UI-api-*
+          path: proof
+      - name: Publish tested unsigned candidate for signing
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk TXT-preview.apk
-          sha256sum TXT-preview.apk > TXT-preview.apk.sha256
-          shopt -s nullglob
-          TXT_SCREENSHOTS=(app/build/outputs/ui-screenshots/*.png app/build/outputs/ui-screenshots/*.mp4)
-          gh release create "preview-${{ github.run_number }}" TXT-preview.apk TXT-preview.apk.sha256 --target "${{ github.sha }}" --prerelease --title "TXT Preview ${{ github.run_number }}" --notes-file RELEASE_NOTES.md "${TXT_SCREENSHOTS[@]}"
+          mkdir -p candidate
+          cp unsigned/apk/release/*.apk candidate/TXT-unsigned.apk
+          cp unsigned/bundle/release/*.aab candidate/TXT-unsigned.aab
+          cp unsigned/mapping/release/mapping.txt candidate/mapping.txt
+          cp -r proof candidate/qa-proof
+          tar -czf candidate/QA-proof.tar.gz -C candidate qa-proof
+          sha256sum candidate/TXT-unsigned.apk candidate/TXT-unsigned.aab > candidate/SHA256SUMS
+          gh release create "candidate-${{ github.run_number }}" --target "${{ github.sha }}" --prerelease --title "TXT tested signing candidate ${{ github.run_number }}" --notes 'Unsigned release APK/AAB after Android 8 and Android 16 checks. These are build inputs for signing, not the final install downloads. Use the stable versioned release for installation.' candidate/TXT-unsigned.apk candidate/TXT-unsigned.aab candidate/mapping.txt candidate/QA-proof.tar.gz candidate/SHA256SUMS

@@ -27,8 +27,17 @@ import androidx.compose.material.icons.automirrored.outlined.Redo
 import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import com.secure.textpad.ui.theme.GlassButton as Button
+import com.secure.textpad.ui.theme.GlassTextButton as TextButton
+import com.secure.textpad.ui.theme.GlassOutlinedButton as OutlinedButton
+import com.secure.textpad.ui.theme.GlassTonalButton as FilledTonalButton
+import com.secure.textpad.ui.theme.GlassIconButton as IconButton
+import com.secure.textpad.ui.theme.GlassFilterChip as FilterChip
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawBehind
+import com.secure.textpad.ui.theme.GlassStyle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.toArgb
@@ -149,7 +158,6 @@ fun EditorScreen(
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) { if (doc.fresh) { focus.requestFocus(); keyboard?.show() } }
-    val toolbarInteraction = remember { MutableInteractionSource() }
     var saveAs by remember { mutableStateOf(false) }
     var fileName by remember { mutableStateOf("") }
     var saveAsEncrypted by remember { mutableStateOf(false) }
@@ -241,6 +249,7 @@ fun EditorScreen(
         val font = when (family) { 1 -> FontFamily.SansSerif; 2 -> FontFamily.Serif; else -> FontFamily.Monospace }
         val textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = size.sp, lineHeight = (size * 1.5f).sp, fontFamily = font)
         val gutterColor = MaterialTheme.colorScheme.onSurfaceVariant
+        val activeLineColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.055f)
         val margin = with(density) { 30.dp.toPx() }
         LaunchedEffect(doc.value.text, doc.value.selection, layout, viewport, imeBottom, wrap, numbers) {
             withFrameNanos { }
@@ -262,7 +271,7 @@ fun EditorScreen(
                 horizontal.scrollTo(x.roundToInt().coerceIn(0, horizontal.maxValue))
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth().padding(top = 8.dp).liquidGlass().padding(12.dp)
+        Box(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp).liquidGlass(style = GlassStyle.Writing).padding(horizontal = 18.dp, vertical = 20.dp)
             .testTag("editor.viewport").onSizeChanged { viewport = it }) {
             Row(Modifier.fillMaxWidth().verticalScroll(vertical).padding(bottom = 40.dp)) {
                 if (numbers) {
@@ -292,7 +301,19 @@ fun EditorScreen(
                     BasicTextField(value = doc.value, onValueChange = { doc.edit(it) },
                         modifier = Modifier.fillMaxWidth().widthIn(min = with(density) { fieldWidth.toDp() }).focusRequester(focus).defaultMinSize(minHeight = 240.dp).testTag("editor.input"),
                         readOnly = busy, textStyle = textStyle, cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        onTextLayout = { layout = it })
+                        onTextLayout = { layout = it },
+                        decorationBox = { input ->
+                            Box(Modifier.drawBehind {
+                                layout?.takeIf { it.layoutInput.text.text == doc.value.text }?.let { measured ->
+                                    val line = measured.getLineForOffset(doc.value.selection.end.coerceIn(0, doc.value.text.length))
+                                    drawRect(activeLineColor, topLeft = Offset(0f, measured.getLineTop(line)),
+                                        size = androidx.compose.ui.geometry.Size(this.size.width, measured.getLineBottom(line) - measured.getLineTop(line)))
+                                }
+                            }) {
+                                if (doc.value.text.isEmpty()) Text("Start writing…", style = textStyle.copy(color = gutterColor))
+                                input()
+                            }
+                        })
                 }
             }
         }
@@ -300,14 +321,14 @@ fun EditorScreen(
             Text("History change at character ${change.start + 1}" + if (change.collapsed) " · text removed" else " · changed text selected",
                 Modifier.padding(top = 4.dp, start = 8.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         }
-        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).liquidGlass(toolbarInteraction).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { save() }, enabled = !busy && !saving, interactionSource = toolbarInteraction) { Icon(Icons.Outlined.Save, null); Spacer(Modifier.width(5.dp)); Text("Save") }
-            TextButton(onClick = { password = true }, enabled = !busy && !saving, interactionSource = toolbarInteraction) { Icon(Icons.Outlined.Lock, null); Spacer(Modifier.width(5.dp)); Text("Lock") }
-            TextButton(onClick = { finding = !finding }, interactionSource = toolbarInteraction) { Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(5.dp)); Text("Find") }
-            TextButton(onClick = { tools = true }, interactionSource = toolbarInteraction) { Icon(Icons.Outlined.Tune, null); Text("Tools ⋯") }
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).liquidGlass().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { save() }, enabled = !busy && !saving) { Icon(Icons.Outlined.Save, null); Spacer(Modifier.width(5.dp)); Text("Save") }
+            TextButton(onClick = { password = true }, enabled = !busy && !saving) { Icon(Icons.Outlined.Lock, null); Spacer(Modifier.width(5.dp)); Text("Lock") }
+            TextButton(onClick = { finding = !finding }) { Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(5.dp)); Text("Find") }
+            TextButton(onClick = { tools = true }) { Icon(Icons.Outlined.Tune, null); Text("Tools ⋯") }
         }
-        Text("$stats\nUTF-8 · ${if (doc.encrypted) "Encrypted" else "Plain"} · ${if (doc.file.vault) "Private vault" else "Workspace"}",
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall)
+        Text("$stats${if (imeBottom > 0) " · " else "\n"}UTF-8 · ${if (doc.encrypted) "Encrypted" else "Plain"} · ${if (doc.file.vault) "Private vault" else "Workspace"}",
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall, maxLines = if (imeBottom > 0) 1 else 2, overflow = TextOverflow.Ellipsis)
     }
     if (password) PasswordDialog(title = if (doc.encrypted) "Password to save" else "Lock this document", confirm = !doc.encrypted,
         onDismiss = { password = false }, onSensitive = onSensitivePrompt,
@@ -319,7 +340,7 @@ fun EditorScreen(
                 TextButton(onClick = { doc.undo(); tools = false }, enabled = !busy && doc.canUndo) { Text("Undo") }
                 TextButton(onClick = { doc.redo(); tools = false }, enabled = !busy && doc.canRedo) { Text("Redo") }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) { Text("Word wrap", Modifier.weight(1f)); Switch(wrap, { wrap = it }) }
+            Row(verticalAlignment = Alignment.CenterVertically) { Text("Word wrap", Modifier.weight(1f)); Switch(wrap, { wrap = it }, modifier = Modifier.testTag("editor.wordWrap")) }
             Text("Comfort font size · ${size}sp")
             Slider(value = size.toFloat(), onValueChange = { size = it.toInt() }, valueRange = 12f..30f, steps = 17)
             TextButton(onClick = { tools = false; onMove() }, enabled = !busy && !saving && !doc.dirty) { Text(if (doc.file.vault) "Move to workspace" else "Isolate from other apps") }

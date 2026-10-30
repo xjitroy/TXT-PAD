@@ -18,6 +18,13 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import com.secure.textpad.ui.theme.GlassButton as Button
+import com.secure.textpad.ui.theme.GlassTextButton as TextButton
+import com.secure.textpad.ui.theme.GlassOutlinedButton as OutlinedButton
+import com.secure.textpad.ui.theme.GlassTonalButton as FilledTonalButton
+import com.secure.textpad.ui.theme.GlassIconButton as IconButton
+import com.secure.textpad.ui.theme.GlassFilterChip as FilterChip
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -197,6 +204,7 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
 
 class MainActivity : FragmentActivity() {
     private val prefs by lazy { getSharedPreferences("txt", MODE_PRIVATE) }
+    private var animateGlass by mutableStateOf(true)
     private var appLock by mutableStateOf(false)
     private var unlocked by mutableStateOf(true)
     private var incoming by mutableStateOf<Uri?>(null)
@@ -206,10 +214,11 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        animateGlass = prefs.getBoolean("animated_glass", true)
         appLock = prefs.getBoolean("app_lock", false)
         unlocked = !appLock
         incoming = externalUri(intent)
-        setContent { LiquidGlassTheme { App() } }
+        setContent { LiquidGlassTheme(animateBackdrop = animateGlass) { App() } }
     }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); incoming = externalUri(intent) }
     private fun externalUri(intent: Intent?): Uri? = if (intent?.action == Intent.ACTION_VIEW || intent?.action == Intent.ACTION_EDIT) intent?.data else null
@@ -315,7 +324,8 @@ class MainActivity : FragmentActivity() {
                 onRestore = { restorePicker.launch(arrayOf("*/*")) },
                 onPrivateDefault = { vm.defaultPrivate = it; vm.repository.defaultPrivate = it },
                 onAppLock = { enable -> authenticate { appLock = enable; unlocked = true; prefs.edit().putBoolean("app_lock", enable).apply() } },
-                onRefresh = vm::refresh, onRename = vm::rename, onTrash = vm::trash, onShowTrash = { vm.showTrash = true; vm.refresh() })
+                onRefresh = vm::refresh, onRename = vm::rename, onTrash = vm::trash, onShowTrash = { vm.showTrash = true; vm.refresh() },
+                motionEnabled = animateGlass, onMotionChange = { animateGlass = it; prefs.edit().putBoolean("animated_glass", it).apply() })
             else EditorScreen(doc, vm.busy, saving = vm.saving, onBack = vm::back,
                 onSave = { e, p -> vm.save(e, p) }, onSaveAs = { name, encrypted -> saveAsEncrypted = encrypted; exportPicker.launch(name) }, onMove = { vm.move(doc.file) }, onSensitivePrompt = { sensitive = it })
         }
