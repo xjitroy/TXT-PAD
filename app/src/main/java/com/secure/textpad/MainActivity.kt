@@ -117,15 +117,21 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun saveAs(uri: Uri, password: CharArray?) {
         val doc = editor
-        if (busy || saving || doc == null) { password?.fill('\u0000'); return }
+        if (busy || doc == null) { password?.fill('\u0000'); return }
         val text = doc.value.text
         runOperation {
+            var sealed: SessionPassword? = null
             try {
+                // Finish an in-flight auto-save before switching the active destination.
+                while (saving) kotlinx.coroutines.delay(20)
+                if (password != null) sealed = withContext(Dispatchers.IO) { SessionPassword.seal(password.copyOf()) }
                 val destination = repository.external(uri)
-                repository.save(destination, text, password != null, password)
-                notice = "Saved copy: ${destination.name}"
+                val saved = repository.save(destination, text, password != null, password)
+                doc.saved(saved, text, password != null)
+                doc.setSession(sealed); sealed = null
+                notice = "Saved as ${destination.name}. Auto-save now uses this file."
                 reload()
-            } finally { password?.fill('\u0000') }
+            } finally { sealed?.clear(); password?.fill('\u0000') }
         }
     }
     fun save(encrypted: Boolean, password: CharArray?, navigateAfter: Boolean = false) {
@@ -289,7 +295,7 @@ class MainActivity : FragmentActivity() {
             }
             return
         }
-        AnimatedContent(targetState = vm.editor, contentKey = { it?.file?.uri?.toString() ?: "home" }, label = "document expansion",
+        AnimatedContent(targetState = vm.editor, contentKey = { it?.sessionId ?: "home" }, label = "document expansion",
             transitionSpec = { (fadeIn(tween(180)) + slideInVertically(animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.88f, stiffness = 420f), initialOffsetY = { it / 24 })).togetherWith(fadeOut(tween(120))) }) { doc ->
             if (doc == null && vm.showTrash) TrashScreen(vm.trash, vm.busy,
                 onBack = { vm.showTrash = false }, onRestore = vm::restoreTrash, onDelete = vm::deleteTrash)

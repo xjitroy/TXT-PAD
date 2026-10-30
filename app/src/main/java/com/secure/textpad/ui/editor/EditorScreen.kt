@@ -56,6 +56,7 @@ import kotlinx.coroutines.withContext
 import java.util.regex.Pattern
 
 class EditorDocument(file: PadFile, text: String, locked: Boolean, fresh: Boolean = false) {
+    val sessionId: String = java.util.UUID.randomUUID().toString()
     var file by mutableStateOf(file)
     var value by mutableStateOf(TextFieldValue(text))
         private set
@@ -326,7 +327,7 @@ fun EditorScreen(
                 TextButton(onClick = { tools = false; fileName = if (doc.fresh) "Untitled.txt" else doc.file.name; saveAsEncrypted = doc.encrypted; saveAs = true }, enabled = !busy) { Text("Save As…") }
             }
             Text(stats + " · UTF-8", style = MaterialTheme.typography.bodySmall)
-            Row(verticalAlignment = Alignment.CenterVertically) { Text("Line numbers", Modifier.weight(1f)); Switch(numbers, { numbers = it }) }
+            Row(verticalAlignment = Alignment.CenterVertically) { Text("Line numbers", Modifier.weight(1f)); Switch(numbers, { numbers = it }, modifier = Modifier.testTag("editor.lineNumbers")) }
             Row(verticalAlignment = Alignment.CenterVertically) { Text("Auto-save", Modifier.weight(1f)); Switch(autoSave, { autoSave = it }) }
             Text("Font family", style = MaterialTheme.typography.labelLarge)
             listOf("Monospace", "Sans serif", "Serif").forEachIndexed { i, name -> TextButton(onClick = { family = i }) { Text(if (family == i) "✓ $name" else name) } }

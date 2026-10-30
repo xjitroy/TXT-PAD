@@ -179,6 +179,10 @@ class ThemeAndFileActionsTest {
             }
         }
         compose.waitForIdle()
+        compose.onNodeWithText("Tools ⋯").performClick()
+        compose.onNodeWithTag("editor.lineNumbers").performScrollTo().performClick()
+        compose.onNodeWithText("Done").performScrollTo().performClick()
+        compose.waitForIdle()
         val beforeKeyboard = compose.onNodeWithTag("editor.viewport").fetchSemanticsNode().boundsInRoot.height
         compose.onNodeWithTag("editor.input").performClick()
         compose.runOnIdle { document.select(document.value.text.length, document.value.text.length) }
@@ -265,6 +269,49 @@ class ThemeAndFileActionsTest {
             document.clear()
             vm.repository.moveToTrash(document.file)
             vm.repository.deleteTrashPermanently(vm.repository.listTrash().single { it.path == document.file.path }.id)
+        }
+    }
+
+    @Test fun unlockedEncryptedDocumentAutoSavesWithoutAnotherPasswordPrompt() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val vm = PadViewModel(context.applicationContext as Application)
+        val file = runBlocking {
+            val created = vm.repository.create("qa-${UUID.randomUUID()}.stxt", true)
+            vm.repository.save(created, "Locked note", true, "auto-save test password".toCharArray())
+        }
+        compose.waitUntil(15000) { !vm.busy }
+        compose.runOnIdle { vm.open(file) }
+        compose.waitUntil(15000) { vm.unlockFile != null && !vm.busy }
+        compose.runOnIdle { vm.unlock("auto-save test password".toCharArray()) }
+        compose.waitUntil(15000) { vm.editor != null && !vm.busy }
+        val document = vm.editor!!
+        compose.setContent {
+            LiquidGlassTheme(animateBackdrop = false) {
+                EditorScreen(document, vm.busy, saving = vm.saving, onBack = {}, onSave = { encrypted, password -> vm.save(encrypted, password) },
+                    onMove = {}, onSaveAs = { _, _ -> }, onSensitivePrompt = {})
+            }
+        }
+        compose.onNodeWithTag("editor.input").performTextInput("EDITED ")
+        compose.waitUntil(20000) { !document.dirty && !vm.saving }
+        runBlocking {
+            assertTrue(vm.repository.detect(document.file))
+            assertTrue(vm.repository.readText(document.file, "auto-save test password".toCharArray()).contains("EDITED"))
+            document.clear()
+            vm.repository.moveToTrash(document.file)
+            vm.repository.deleteTrashPermanently(vm.repository.listTrash().single { it.path == document.file.path }.id)
+        }
+    }
+    @Test fun saveAsWritesPhpAndArbitraryExtensionAsUtf8() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val repository = StorageRepository(context)
+        val text = "<?php echo 'বাংলা'; ?>"
+        listOf("php", "html", "custom-extension").forEach { extension ->
+            val file = File(context.filesDir, "qa-${UUID.randomUUID()}.$extension").apply { createNewFile() }
+            try {
+                val destination = repository.external(Uri.fromFile(file))
+                repository.save(destination, text, false)
+                assertEquals(text, file.readText(Charsets.UTF_8))
+            } finally { file.delete() }
         }
     }
 

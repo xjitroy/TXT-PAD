@@ -140,6 +140,7 @@ private class MeshPainter(private val colors: ColorScheme, private val dark: Boo
             val angle = phase + index * 2.094f
             val x = width * (0.5f + cos(angle) * 0.47f)
             val y = height * (0.47f + sin(angle) * 0.43f)
+            paint.color = android.graphics.Color.WHITE
             paint.shader = RadialGradient(x, y, radius,
                 intArrayOf(tint.copy(alpha = if (dark) 0.48f else 0.25f).toArgb(), tint.copy(alpha = 0f).toArgb()),
                 floatArrayOf(0f, 1f), Shader.TileMode.CLAMP)
