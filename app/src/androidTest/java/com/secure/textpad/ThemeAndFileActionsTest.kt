@@ -393,6 +393,9 @@ class ThemeAndFileActionsTest {
                 }
             }
         }
+        compose.onNodeWithText("Undo").assertIsDisplayed()
+        compose.onNodeWithText("Redo").assertIsDisplayed()
+        compose.onNodeWithText("Tools ⋯").assertIsDisplayed()
         capture("editor-light-large-text")
         compose.onNodeWithText("Tools ⋯").performScrollTo().performClick()
         compose.onNodeWithText("Done").performScrollTo().performClick()

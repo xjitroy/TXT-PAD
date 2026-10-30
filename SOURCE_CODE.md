@@ -1546,6 +1546,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
@@ -1649,7 +1650,7 @@ private fun search(text: String, query: String, case: Boolean, regex: Boolean): 
     } catch (e: Exception) { SearchResult(error = e.message ?: "Invalid expression.") }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EditorScreen(
     doc: EditorDocument, busy: Boolean, saving: Boolean = false, onBack: () -> Unit,
@@ -1709,10 +1710,10 @@ fun EditorScreen(
                     Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            IconButton(onClick = { doc.undo() }, enabled = !busy && doc.canUndo, modifier = Modifier.testTag("editor.undo")) {
+            TextButton(onClick = { doc.undo() }, enabled = !busy && doc.canUndo, modifier = Modifier.testTag("editor.undo")) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.AutoMirrored.Outlined.Undo, "Undo", Modifier.size(20.dp)); Text("Undo", style = MaterialTheme.typography.labelSmall) }
             }
-            IconButton(onClick = { doc.redo() }, enabled = !busy && doc.canRedo, modifier = Modifier.testTag("editor.redo")) {
+            TextButton(onClick = { doc.redo() }, enabled = !busy && doc.canRedo, modifier = Modifier.testTag("editor.redo")) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.AutoMirrored.Outlined.Redo, "Redo", Modifier.size(20.dp)); Text("Redo", style = MaterialTheme.typography.labelSmall) }
             }
         }
@@ -1787,7 +1788,8 @@ fun EditorScreen(
                     val paint = remember(gutterColor, size, density) { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                         color = gutterColor.toArgb(); textSize = with(density) { size.sp.toPx() }; typeface = android.graphics.Typeface.MONOSPACE
                     } }
-                    Canvas(Modifier.width(52.dp).height(height).testTag("editor.gutter")) {
+                    val numberWidth = with(density) { paint.measureText(starts.size.toString()).toDp() } + 12.dp
+                    Canvas(Modifier.width(numberWidth.coerceAtLeast(40.dp)).height(height).testTag("editor.gutter")) {
                         layout?.let { l ->
                             val top = vertical.value.toFloat()
                             val firstLine = l.getLineForVerticalPosition(top.coerceAtLeast(0f))
@@ -1827,14 +1829,19 @@ fun EditorScreen(
             Text("History change at character ${change.start + 1}" + if (change.collapsed) " · text removed" else " · changed text selected",
                 Modifier.padding(top = 4.dp, start = 8.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         }
-        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).liquidGlass().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { save() }, enabled = !busy && !saving) { Icon(Icons.Outlined.Save, null); Spacer(Modifier.width(5.dp)); Text("Save") }
-            TextButton(onClick = { password = true }, enabled = !busy && !saving) { Icon(Icons.Outlined.Lock, null); Spacer(Modifier.width(5.dp)); Text("Lock") }
-            TextButton(onClick = { finding = !finding }) { Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(5.dp)); Text("Find") }
-            TextButton(onClick = { tools = true }) { Icon(Icons.Outlined.Tune, null); Text("Tools ⋯") }
+        val actionColumns = if (density.fontScale > 1.25f || LocalConfiguration.current.screenWidthDp < 360) 2 else 4
+        val actionPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp)
+        FlowRow(Modifier.fillMaxWidth().padding(vertical = 8.dp).liquidGlass().padding(horizontal = 8.dp),
+            maxItemsInEachRow = actionColumns, horizontalArrangement = Arrangement.SpaceEvenly) {
+            TextButton(onClick = { save() }, enabled = !busy && !saving, modifier = Modifier.weight(1f), contentPadding = actionPadding) { Icon(Icons.Outlined.Save, null); Spacer(Modifier.width(5.dp)); Text("Save", maxLines = 1, softWrap = false) }
+            TextButton(onClick = { password = true }, enabled = !busy && !saving, modifier = Modifier.weight(1f), contentPadding = actionPadding) { Icon(Icons.Outlined.Lock, null); Spacer(Modifier.width(5.dp)); Text("Lock", maxLines = 1, softWrap = false) }
+            TextButton(onClick = { finding = !finding }, modifier = Modifier.weight(1f), contentPadding = actionPadding) { Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(5.dp)); Text("Find", maxLines = 1, softWrap = false) }
+            TextButton(onClick = { tools = true }, modifier = Modifier.weight(1f), contentPadding = actionPadding) { Icon(Icons.Outlined.Tune, null); Text("Tools ⋯", maxLines = 1, softWrap = false) }
         }
-        Text("$stats${if (imeBottom > 0) " · " else "\n"}UTF-8 · ${if (doc.encrypted) "Encrypted" else "Plain"} · ${if (doc.file.vault) "Private vault" else "Workspace"}",
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall, maxLines = if (imeBottom > 0) 1 else 2, overflow = TextOverflow.Ellipsis)
+        val securityStatus = "${if (doc.encrypted) "Encrypted" else "Plain"} · ${if (doc.file.vault) "Private vault" else "Workspace"}"
+        Text(if (imeBottom > 0) "$securityStatus · $stats" else "$stats\nUTF-8 · $securityStatus",
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall,
+            maxLines = if (imeBottom > 0) 1 else 2, overflow = TextOverflow.Ellipsis)
     }
     if (password) PasswordDialog(title = if (doc.encrypted) "Password to save" else "Lock this document", confirm = !doc.encrypted,
         onDismiss = { password = false }, onSensitive = onSensitivePrompt,
@@ -2380,11 +2387,13 @@ fun GlassButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boo
 
 @Composable
 fun GlassTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
-    interactionSource: MutableInteractionSource? = null, content: @Composable RowScope.() -> Unit) {
+    interactionSource: MutableInteractionSource? = null,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+    content: @Composable RowScope.() -> Unit) {
     val source = interactionSource ?: remember { MutableInteractionSource() }
     TextButton(onClick, modifier.heightIn(min = 48.dp).glassPress(source), enabled = enabled,
         shape = RoundedCornerShape(18.dp), interactionSource = source,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), content = content)
+        contentPadding = contentPadding, content = content)
 }
 
 @Composable

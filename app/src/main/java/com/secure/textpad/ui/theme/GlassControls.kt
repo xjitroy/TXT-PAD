@@ -59,11 +59,13 @@ fun GlassButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boo
 
 @Composable
 fun GlassTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
-    interactionSource: MutableInteractionSource? = null, content: @Composable RowScope.() -> Unit) {
+    interactionSource: MutableInteractionSource? = null,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+    content: @Composable RowScope.() -> Unit) {
     val source = interactionSource ?: remember { MutableInteractionSource() }
     TextButton(onClick, modifier.heightIn(min = 48.dp).glassPress(source), enabled = enabled,
         shape = RoundedCornerShape(18.dp), interactionSource = source,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), content = content)
+        contentPadding = contentPadding, content = content)
 }
 
 @Composable

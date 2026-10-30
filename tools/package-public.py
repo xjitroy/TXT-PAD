@@ -15,7 +15,7 @@ for f in root.rglob('*'):
  assert f.suffix not in private_suffixes,f'Private signing file found: {f.name}'
  if f.name=='local.properties' or f.suffix=='.pyc': continue
  assert not f.name.startswith('.env'),f'Environment credentials found: {f.name}'
- assert b'-----BEGIN PRIVATE KEY-----' not in f.read_bytes(),f'Private key content found: {f.name}'
+ assert (b'-----BEGIN '+b'PRIVATE KEY-----') not in f.read_bytes(),f'Private key content found: {f.name}'
  files.append(f)
 with zipfile.ZipFile(out/'TXT-source.zip','w',zipfile.ZIP_DEFLATED) as z:
  for f in sorted(files):z.write(f,'TXT-PAD/'+str(f.relative_to(root)))
