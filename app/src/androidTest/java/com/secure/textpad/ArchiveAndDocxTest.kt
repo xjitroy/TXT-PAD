@@ -85,6 +85,10 @@ class ArchiveAndDocxTest {
             assertFalse(File(root, "files/escape.txt").exists())
         }
     }
+    @Test fun autoTitlePreservesBengaliAndCombiningAccentMarks() = isolated { repo, _ ->
+        assertEquals("বাংলা লেখা.txt", repo.autoTitle("বাংলা লেখা\nSecond line"))
+        assertEquals("Cafe\u0301 notes.txt", repo.autoTitle("Cafe\u0301 notes"))
+    }
     @Test fun nativeDocxRoundTripsUnicodeParagraphsAndRejectsDeclarations() {
         val text = "A <clear> & useful page\nবাংলা লেখা 🔐\n\nLast paragraph"
         val out = ByteArrayOutputStream(); DocxHandler.write(text, out)

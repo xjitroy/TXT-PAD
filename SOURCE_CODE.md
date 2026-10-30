@@ -1172,7 +1172,12 @@ class StorageRepository(private val context: Context) {
 
     fun autoTitle(text: String, extension: String = "txt"): String {
         val line = text.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty()
-        val clean = line.filter { it.isLetterOrDigit() || it == ' ' || it == '-' || it == '_' }.trim().take(60)
+        val clean = line.filter {
+            val type = Character.getType(it)
+            it.isLetterOrDigit() || type == Character.NON_SPACING_MARK.toInt() ||
+                type == Character.COMBINING_SPACING_MARK.toInt() || type == Character.ENCLOSING_MARK.toInt() ||
+                it == ' ' || it == '-' || it == '_'
+        }.trim().take(60)
         val title = clean.ifBlank { java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date()) }
         return "$title.$extension"
     }
