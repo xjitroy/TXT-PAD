@@ -1,6 +1,10 @@
 # TXT: APK তৈরির সহজ নিয়ম
 
-GitHub repo বাধ্যতামূলক নয়। APK এখনও build করা হয়নি।
+APK তৈরি হয়েছে এবং compilation, crypto unit tests ও lint পাস করেছে।
+
+সরাসরি ডাউনলোড: https://github.com/xjitroy/TXT-PAD/releases/download/preview-2/TXT-preview.apk
+
+এটি debug-signed preview; ফোনে বাস্তব পরীক্ষা এখনও বাকি।
 
 ## কম্পিউটার থাকলে — সবচেয়ে সহজ
 
@@ -20,7 +24,7 @@ Windows-এ Android Studio-র Gradle panel থেকে একই task চা�
 2. .github/workflows/android.yml ফাইলটিও একই path-এ রাখুন। ফোনে hidden folder upload অসুবিধা হলে GitHub → Add file → Create new file দিয়ে ওই পূর্ণ path লিখে project-এর workflow-এর content paste করুন।
 3. Actions → Build TXT APK → Run workflow চাপুন।
 4. সব check সবুজ হলে completed run-এর Artifacts → TXT-debug-APK ডাউনলোড করুন। Artifact ZIP খুলে APK ইনস্টল করুন।
-5. Build লাল হলে TXT-check-reports ও failed step-এর log দেখুন। এখানে build পরীক্ষা করা হয়নি, তাই সবুজ build নিশ্চিত বলে ধরে নেবেন না।
+5. Build লাল হলে TXT-check-reports ও failed step-এর log দেখুন। পরবর্তী পরিবর্তনের build সফল হয়েছে কি না ওই run-এর ফল দেখে নিশ্চিত হোন।
 
 ## ইনস্টলের পর সংক্ষিপ্ত পরীক্ষা
 
