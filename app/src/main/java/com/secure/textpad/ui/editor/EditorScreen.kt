@@ -312,8 +312,8 @@ fun EditorScreen(
     if (password) PasswordDialog(title = if (doc.encrypted) "Password to save" else "Lock this document", confirm = !doc.encrypted,
         onDismiss = { password = false }, onSensitive = onSensitivePrompt,
         onPassword = { password = false; onSave(true, it) })
-    if (tools) ModalBottomSheet(sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), modifier = Modifier.liquidGlass(), containerColor = Color.Transparent, onDismissRequest = { tools = false }) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp)) {
+    if (tools) ModalBottomSheet(sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Color.Transparent, onDismissRequest = { tools = false }) {
+        Column(Modifier.fillMaxWidth().liquidGlass().verticalScroll(rememberScrollState()).padding(24.dp)) {
             Text("Tools", style = MaterialTheme.typography.titleLarge)
             Row {
                 TextButton(onClick = { doc.undo(); tools = false }, enabled = !busy && doc.canUndo) { Text("Undo") }

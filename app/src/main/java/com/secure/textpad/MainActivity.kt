@@ -56,6 +56,7 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
     var editor by mutableStateOf<EditorDocument?>(null); private set
     var busy by mutableStateOf(false); private set
     var saving by mutableStateOf(false); private set
+    var savingProtected by mutableStateOf(false); private set
     var notice by mutableStateOf<String?>(null)
     var unlockFile by mutableStateOf<PadFile?>(null)
     var workspace by mutableStateOf(repository.workspace != null); private set
@@ -139,6 +140,7 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
         if (busy || saving || doc == null) { password?.fill('\u0000'); return }
         val text = doc.value.text
         saving = true
+        savingProtected = encrypted
         viewModelScope.launch {
             var sealed: SessionPassword? = null
             var actualPassword: CharArray? = password
@@ -161,7 +163,7 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
                 if (encrypted && password == null) doc.setSession(null)
                 report(e)
             }
-            finally { sealed?.clear(); actualPassword?.fill('\u0000'); password?.fill('\u0000'); saving = false }
+            finally { sealed?.clear(); actualPassword?.fill('\u0000'); password?.fill('\u0000'); saving = false; savingProtected = false }
         }
     }
     fun move(file: PadFile) = runOperation {
@@ -269,7 +271,7 @@ class MainActivity : FragmentActivity() {
         val exportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
             if (uri != null) { if (saveAsEncrypted) saveAsUri = uri else vm.saveAs(uri, null) }
         }
-        val secure = appLock || vm.saving || saveAsUri != null || vm.busy || sensitive || vm.editor?.encrypted == true || vm.unlockFile != null || !unlocked || backupUri != null || restorePassword
+        val secure = appLock || vm.savingProtected || saveAsUri != null || vm.busy || sensitive || vm.editor?.encrypted == true || vm.unlockFile != null || !unlocked || backupUri != null || restorePassword
         SideEffect {
             if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)

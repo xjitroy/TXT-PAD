@@ -70,9 +70,11 @@ class ThemeAndFileActionsTest {
         val additionalOutput = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
         val destination = (additionalOutput?.let(::File) ?: File(context.filesDir, "qa")).apply { mkdirs() }
         File(destination, "$name-semantics.txt").writeText(compose.onRoot().printToString())
-        File(destination, "$name.png").outputStream().use {
-            check(compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it))
-        }
+        // Capture the actual device compositor, including GPU RenderNode blur and the IME.
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        val bitmap = checkNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
+        try { File(destination, "$name.png").outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) } }
+        finally { bitmap.recycle() }
     }
     @Test fun darkHomeIsReadableAndHasFileActions() {
         home(true)
