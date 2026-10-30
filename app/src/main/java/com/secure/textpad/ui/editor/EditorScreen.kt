@@ -272,7 +272,7 @@ fun EditorScreen(
                     val paint = remember(gutterColor, size, density) { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                         color = gutterColor.toArgb(); textSize = with(density) { size.sp.toPx() }; typeface = android.graphics.Typeface.MONOSPACE
                     } }
-                    Canvas(Modifier.width(52.dp).height(height)) {
+                    Canvas(Modifier.width(52.dp).height(height).testTag("editor.gutter")) {
                         layout?.let { l ->
                             val top = vertical.value.toFloat()
                             val firstLine = l.getLineForVerticalPosition(top.coerceAtLeast(0f))
@@ -312,7 +312,7 @@ fun EditorScreen(
     if (password) PasswordDialog(title = if (doc.encrypted) "Password to save" else "Lock this document", confirm = !doc.encrypted,
         onDismiss = { password = false }, onSensitive = onSensitivePrompt,
         onPassword = { password = false; onSave(true, it) })
-    if (tools) ModalBottomSheet(modifier = Modifier.liquidGlass(), containerColor = Color.Transparent, onDismissRequest = { tools = false }) {
+    if (tools) ModalBottomSheet(sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), modifier = Modifier.liquidGlass(), containerColor = Color.Transparent, onDismissRequest = { tools = false }) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp)) {
             Text("Tools", style = MaterialTheme.typography.titleLarge)
             Row {
@@ -328,7 +328,7 @@ fun EditorScreen(
                 TextButton(onClick = { tools = false; fileName = if (doc.fresh) "Untitled.txt" else doc.file.name; saveAsEncrypted = doc.encrypted; saveAs = true }, enabled = !busy) { Text("Save As…") }
             }
             Text(stats + " · UTF-8", style = MaterialTheme.typography.bodySmall)
-            Row(verticalAlignment = Alignment.CenterVertically) { Text("Line numbers", Modifier.weight(1f)); Switch(numbers, { numbers = it }, modifier = Modifier.testTag("editor.lineNumbers")) }
+            Row(verticalAlignment = Alignment.CenterVertically) { Text("Line numbers", Modifier.weight(1f)); Switch(numbers, { numbers = it; tools = false }, modifier = Modifier.testTag("editor.lineNumbers")) }
             Row(verticalAlignment = Alignment.CenterVertically) { Text("Auto-save", Modifier.weight(1f)); Switch(autoSave, { autoSave = it }) }
             Text("Font family", style = MaterialTheme.typography.labelLarge)
             listOf("Monospace", "Sans serif", "Serif").forEachIndexed { i, name -> TextButton(onClick = { family = i }) { Text(if (family == i) "✓ $name" else name) } }

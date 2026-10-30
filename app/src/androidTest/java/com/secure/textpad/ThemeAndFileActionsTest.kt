@@ -80,8 +80,8 @@ class ThemeAndFileActionsTest {
         compose.onNodeWithText("Private Vault").assertIsDisplayed()
         capture("home-dark")
         compose.onNodeWithContentDescription("File options: Meeting notes.txt").performScrollTo().performClick()
-        compose.onNodeWithText("Rename").assertIsDisplayed()
-        compose.onNodeWithText("Move to…").assertIsDisplayed()
+        compose.onNodeWithText("Rename").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Move to…").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Move to Trash").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Rename").performScrollTo().performClick()
         compose.onNodeWithText("Rename file").assertIsDisplayed()
@@ -181,8 +181,8 @@ class ThemeAndFileActionsTest {
         compose.waitForIdle()
         compose.onNodeWithText("Tools ⋯").performClick()
         compose.onNodeWithTag("editor.lineNumbers").performScrollTo().performClick()
-        compose.onNodeWithText("Done").performScrollTo().performClick()
         compose.waitForIdle()
+        compose.onNodeWithTag("editor.gutter").assertIsDisplayed()
         val beforeKeyboard = compose.onNodeWithTag("editor.viewport").fetchSemanticsNode().boundsInRoot.height
         compose.onNodeWithTag("editor.input").performClick()
         compose.runOnIdle { document.select(document.value.text.length, document.value.text.length) }
@@ -292,7 +292,8 @@ class ThemeAndFileActionsTest {
             }
         }
         compose.onNodeWithTag("editor.input").performTextInput("EDITED ")
-        compose.waitUntil(20000) { !document.dirty && !vm.saving }
+        compose.waitUntil(45000) { (!document.dirty && !vm.saving) || vm.notice != null }
+        compose.runOnIdle { assertNull("Encrypted auto-save failed: ${vm.notice}", vm.notice) }
         runBlocking {
             assertTrue(vm.repository.detect(document.file))
             assertTrue(vm.repository.readText(document.file, "auto-save test password".toCharArray()).contains("EDITED"))

@@ -183,7 +183,7 @@ fun HomeScreen(
         }
     }
     options?.let { file ->
-        ModalBottomSheet(modifier = Modifier.liquidGlass(), containerColor = Color.Transparent, onDismissRequest = { options = null }) {
+        ModalBottomSheet(sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), modifier = Modifier.liquidGlass(), containerColor = Color.Transparent, onDismissRequest = { options = null }) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
                 Text(file.name, style = MaterialTheme.typography.titleLarge)
                 TextButton(onClick = { options = null; onOpen(file) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Icon(Icons.Outlined.Description, null); Spacer(Modifier.width(8.dp)); Text("Open") }
