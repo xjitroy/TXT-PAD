@@ -44,6 +44,7 @@ import org.junit.Test
 import java.io.File
 import java.util.UUID
 
+@OptIn(ExperimentalTestApi::class)
 class ThemeAndFileActionsTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @Before fun configureEditorWindow() {

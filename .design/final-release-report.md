@@ -25,6 +25,12 @@ created by the native XML serializer for <, &, > and emoji. It now handles text,
 entity-reference text and whitespace tokens while still rejecting DTD declarations and
 unresolved entities. The Unicode round-trip test remains in the suite.
 
+Large-font screenshot review caught Undo/Redo captions clipped inside fixed-height icon
+buttons. These now use controls that grow with their labels. The editor action bar wraps
+into two rows at large font scales/narrow widths; its critical Tools action is visible
+without horizontal scrolling. Gutter width is measured from the current number of digits.
+A final filename fix preserves combining vowel/accent marks so Bengali auto-titles are intact.
+
 ## Evidence and scope
 
 Exact source commits, API 26/36 test results, signed/minified APK smoke results, APK/AAB

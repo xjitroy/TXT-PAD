@@ -45,7 +45,9 @@ def locate(label=None, *, edit=False, timeout=25, scroll=False):
                 adb('shell', 'input', 'swipe', str((x1+x2)//2), str((y1+3*y2)//4), str((3*y1+y2)//4), '350')
                 swiped = True
         time.sleep(.3)
-    (out/'failed-ui.xml').write_text(ET.tostring(tree(), encoding='unicode'))
+    failed=ET.tostring(tree(), encoding='unicode')
+    (out/'failed-ui.xml').write_text(failed)
+    print('Synthetic release-smoke UI at failure:',failed,flush=True)
     raise AssertionError(f'UI element not found: {label!r}, edit={edit}')
 
 def tap(label=None, *, node=None, **options):

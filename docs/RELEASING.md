@@ -77,3 +77,24 @@ have different signing identities and cannot necessarily update each other. Choo
 arrangement in Play Console before onboarding; store its app-signing and upload fingerprints.
 An existing Play app must use its registered upload key, not a new key from another project.
 Never upload the private recovery kit as a Play store listing asset.
+
+## Publish pre-signed files without sharing the key with Actions
+
+If a managed connector cannot call uploads.github.com, keep the key local and use the
+public-blob staging route. It sends only signed public artifacts, never the private kit.
+
+1. Complete the exact source commit's TXT checks run. Sign/validate its candidate files.
+2. Prepare a public-only directory with TXT.apk, TXT.aab, mapping.txt, SHA256SUMS,
+   release-metadata.json, VERIFICATION.json and the two ZIPs from tools/package-public.py.
+   The initial verification report should say signed smoke is pending; the publication
+   workflow fills its actual result only after it passes.
+3. Run tools/stage-release.py with --dir, --source (40-character source SHA), --run (successful
+   TXT checks run ID) and --tag. It creates release/publish-request.json. Never point it at
+   a signing-kit directory. It refuses private-key suffixes and stages an explicit allowlist.
+4. Commit that manifest on main without [skip ci]. Verify and publish signed artifacts
+   downloads the public blobs, checks hashes and the pinned certificate, requires green
+   source checks, runs the actual minified APK and publishes only after success. No signing
+   password/key is sent to the runner. Diagnostics remain in a draft when smoke fails.
+5. Review the real release proof, update the repository's VERIFICATION.json from the release
+   result, and record the build in HANDOFF.md. Public blobs are staging objects; release
+   assets are the durable downloads. Future updates reuse the same signing identity.

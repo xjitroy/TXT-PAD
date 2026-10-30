@@ -23,7 +23,8 @@ used for portable document backup.
 - `HomeScreen.kt`: wrapping search/filter controls, workspace/vault files, labelled bottom dock,
   file actions, Trash, settings and backup prompts.
 - `EditorScreen.kt`: BasicTextField, shared text/gutter scroll, IME caret reveal, bounded history,
-  literal/regex search, debounced save and Tools/Save As/password UI.
+  literal/regex search, debounced save and Tools/Save As/password UI. The action bar wraps
+  at large UI fonts, history controls grow with labels and gutter width follows digit width.
 
 `WindowManager.FLAG_SECURE` protects encrypted documents and password UI. Do not put a
 foreground-containing subtree in a blurred graphicsLayer. Avoid global motion that reruns
