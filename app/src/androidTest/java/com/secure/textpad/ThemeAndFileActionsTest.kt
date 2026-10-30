@@ -72,8 +72,9 @@ class ThemeAndFileActionsTest {
     @Test fun enlargedTextKeepsFiltersAndActionsAccessible() {
         home(true, true)
         compose.onNodeWithText("Private Vault").assertIsDisplayed()
-        compose.onNodeWithText("New File").assertIsDisplayed()
         capture("home-large-text")
+        println("QA New File bounds: " + compose.onNodeWithText("New File").fetchSemanticsNode().boundsInRoot)
+        compose.onNodeWithText("New File").assertIsDisplayed()
     }
     @Test fun rootContentColorTracksSurfaceInBothThemes() {
         var dark by androidx.compose.runtime.mutableStateOf(true)

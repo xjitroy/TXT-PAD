@@ -63,8 +63,8 @@ fun HomeScreen(
     val colors = MaterialTheme.colorScheme
     Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, contentColor = colors.onSurface,
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = onCreate, containerColor = colors.primary, contentColor = colors.onPrimary,
-                icon = { Icon(Icons.Outlined.Add, null) }, text = { Text("New File") })
+            ExtendedFloatingActionButton(onClick = onCreate, modifier = Modifier.heightIn(min = 64.dp).widthIn(min = 160.dp), containerColor = colors.primary, contentColor = colors.onPrimary,
+                icon = { Icon(Icons.Outlined.Add, null) }, text = { Text("New File", maxLines = 1, softWrap = false) })
         }
     ) { padding ->
         // The complete header scrolls with the list on short screens / enlarged fonts.
@@ -80,7 +80,7 @@ fun HomeScreen(
                         Text("TXT", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                         Text("Notes, documents & private files", color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     }
-                    IconButton(onClick = onShowTrash) { Icon(Icons.Outlined.DeleteOutline, "Open Trash") }
+                    TextButton(onClick = onShowTrash) { Icon(Icons.Outlined.DeleteOutline, null, Modifier.size(20.dp)); Text("Trash") }
                     IconButton(onClick = { settings = true }) { Icon(Icons.Outlined.Settings, "Settings") }
                 }
             }
@@ -190,6 +190,7 @@ fun HomeScreen(
     }, confirmButton = { TextButton(onClick = { backup = false }) { Text("Close") } })
     if (settings) AlertDialog(onDismissRequest = { settings = false }, title = { Text("TXT settings") }, text = {
         Column(Modifier.verticalScroll(rememberScrollState())) {
+            Text("Appearance follows your device’s Light / Dark setting.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) { Text("New files in private vault", Modifier.weight(1f)); Switch(defaultPrivate, onPrivateDefault) }
             Row(verticalAlignment = Alignment.CenterVertically) { Text("Fingerprint / screen lock", Modifier.weight(1f)); Switch(appLock, onAppLock) }
             Text("Off by default. When enabled, Android verifies your fingerprint or device screen lock whenever TXT returns from the background.", style = MaterialTheme.typography.bodySmall)
