@@ -1,5 +1,7 @@
 # TXT — offline text editor and document vault
 
+**[Download TXT 1.0.2 preview APK](https://github.com/xjitroy/TXT-PAD/releases/download/preview-14/TXT-preview.apk)** · [Screenshots and animation video](https://github.com/xjitroy/TXT-PAD/releases/tag/preview-14)
+
 Kotlin / Jetpack Compose Material 3. Android 8.0+ (API 26), target/compile API 35.
 The Android app declares no INTERNET or ACCESS_NETWORK_STATE permission. No analytics,
 ads, remote APIs, account requirement or cloud backup integration.
@@ -13,25 +15,46 @@ The source-only bootstrap downloads and checksum-checks Gradle 8.11.1. Build dep
 need network on first sync; the installed app works offline. Alternatively use a local
 Gradle 8.11.1 installation. Release signing must use your own keystore.
 
+The [ordered source bundle](SOURCE_CODE.md) contains the nine requested files and the
+supporting RAM credential implementation. The full repository also includes resources,
+configuration, unit tests and emulator tests.
+
 ## Use
 
-Choose a workspace folder. Tap **New File** to start typing. Back automatically names
-and saves a new plain draft using its first nonempty line or a timestamp. Existing
-documents ask before discarding unsaved edits. Save displays its state in the title bar.
-Light/dark appearance follows the Android system setting, including system-bar icons.
-Material You accents remain automatic on Android 12+. Foreground text is never blurred.
-Home filters wrap, and large-font Backup/Workspace controls stack instead of breaking words.
-The main editor toolbar scrolls horizontally on small screens; Tools opens extended controls.
+Choose a workspace folder. Tap **New File** to start typing with the keyboard ready.
+**Auto-save is on by default**, after a 1.5-second pause in typing. A new draft is named
+from its first nonempty line or a timestamp. Save status appears in the title bar. Typing
+remains enabled during saves, and Back waits for late keyboard commits to be saved before
+leaving. Unsaved existing documents still have a Save / Discard / Keep editing guard.
+
+**Undo / Redo** is visible in the editor header and also available in Tools. It selects
+the changed text (or moves the caret to a deletion), scrolls that location into view, and
+keeps history after auto-save. With the keyboard open, the editing viewport resizes and
+reveals the caret. Optional line numbers use the same vertical scroll owner as the text.
+
+Light/dark appearance follows Android, including system-bar icons. Material You accents
+remain automatic on Android 12+. Animated light ribbons are sampled into frosted glass
+panels, with background-only Gaussian blur, directional reflections, inner highlights,
+soft shadows and spring press feedback. **Foreground text and icons never enter the blur
+node.** Android 8–11 uses a translucent fallback. Disabling system animation scale stops
+the moving mesh. Files / Vault / Trash has a bottom glass dock; the main editor toolbar
+floats above the keyboard. Tools contains font, wrap, line-number and storage controls.
+Home filters wrap, and large-font Backup/Workspace controls stack to keep labels readable.
 
 Each file's **⋮** menu provides Open, Rename, Move and Move to Trash. Rename keeps the
-current extension; Save As changes formats. Move transfers between the active workspace
-and private vault. Trash stores verified raw bytes in private app storage, preserving
-STXT encryption. Open Trash from the labelled header action to Restore or permanently
-Delete with confirmation. Restore keeps both files when names conflict; public files
-return to the active workspace. Trash is excluded from backups: restore needed files
-before exporting. Trash is removed on uninstall, together with the private vault.
-Tools → Save As creates a named copy in the current storage location in TXT, DOCX or STXT format.
-Move a saved file to the workspace to export it from the private vault.
+current extension. Move transfers between the active workspace and private vault. Trash
+stores verified raw bytes in private app storage, preserving STXT encryption. Open Trash
+from the header or bottom dock to Restore or permanently Delete with confirmation.
+Restore keeps both files on filename conflicts; public files return to the active workspace.
+Trash is excluded from backups: restore needed files before exporting. Trash is removed
+on uninstall, together with the private vault.
+
+**Tools → Save As…** accepts your own filename and extension: `index.html`, `script.php`,
+`notes.txt`, `document.docx` or another text extension. Choose a destination in Android's file picker.
+Password protection is selectable; `.stxt` / `.enc` requires it. DOCX exports paragraph
+text only. After a successful Save As, auto-save uses the new file; the original remains.
+Custom extensions saved into the workspace are remembered for future file-list scans.
+Read-only external files can be exported to another location using Save As.
 
 Settings → Fingerprint / screen lock is **off by default**. Enabling/disabling requires
 hardware-backed AndroidKeyStore authentication. Android 11+ supports device credential
@@ -82,8 +105,12 @@ transfer and automatic OS backups are disabled. Use the explicit encrypted backu
 
 Mutable passwords, key bytes and crypto buffers are erased best-effort. JVM strings,
 Compose editor text, IME state, JCA provider key copies and OS Autofill buffers cannot be
-guaranteed erased. FLAG_SECURE protects encrypted screens and password dialogs, including
-busy read/write transitions. Optional app lock is an access gate, not encryption at rest
+guaranteed erased. For encrypted auto-save, the password is sealed in RAM under an AndroidKeyStore AES key.
+Only its ciphertext remains between saves; transient mutable password buffers are wiped
+on use. The sealed token is cleared on document close and is never saved to disk. This
+supports auto-save after an explicit password unlock; it is not password recovery.
+FLAG_SECURE protects encrypted screens and password dialogs, including busy protected
+read/write transitions. Optional app lock is an access gate, not encryption at rest
 for plain files.
 
 Vault saves use fsync + same-directory atomic rename. SAF providers vary: updates use a
@@ -93,15 +120,17 @@ back reported failures; it does not claim a distributed transaction across arbit
 providers. Recovery copies are retained if rollback fails. SAF modification timestamps
 cannot generally be set; original times remain in the manifest, and vault times are restored.
 
-GitHub Actions run [41019504444](https://github.com/xjitroy/TXT-PAD/actions/runs/41019504444)
-successfully compiled the app/test APKs, ran crypto unit tests, Android lint, and seven
-instrumented Android 15 emulator tests on commit `231ad67b0963dd8da970dc43184c02bf7a7f6b1c`.
-[TXT 1.0.1 preview-7](https://github.com/xjitroy/TXT-PAD/releases/tag/preview-7) contains the
-APK, SHA-256 file and light/dark/large-text/editor screenshots. The screenshots were
-visually inspected after export. UI tests verify inherited theme foreground contrast,
-file-action menus, enlarged-text controls, editor tools, rename, plain-file Trash recovery,
-and preservation of password encryption after Trash restoration. Tests use synthetic data.
-Screenshots use the deterministic fallback palette; real Material You accents vary by device.
+Verification results and exact build/release links are recorded in [VERIFICATION.json](VERIFICATION.json).
+[Build 41086574711](https://github.com/xjitroy/TXT-PAD/actions/runs/41086574711) passed compilation,
+crypto unit tests, lint and all **16 instrumented Android 15 tests**. The suite covers fallback light/dark/1.6× text, menus, root foreground
+contrast, editor tools, line-number/keyboard caret visibility, Undo/Redo location, typing
+during saving, default plain auto-save, encrypted auto-save, late IME commits on Back,
+RAM credential clearing, arbitrary extension output, rename and Trash round trips.
+[Release downloads](https://github.com/xjitroy/TXT-PAD/releases) include the preview APK,
+SHA-256, compositor screenshots and a real 8-second first-launch glass animation recording.
+Screenshots use synthetic text and the deterministic fallback palette; the animation uses
+emulator Material You colors. Real device accents vary.
+
 Physical-device/OEM behavior, screen-reader accessibility, cold-start, 120 Hz pacing and
 independent security review remain unverified. This is a debug-signed preview. Export a
 verified offline backup before uninstalling if Android rejects an update due to a changed

@@ -1,37 +1,60 @@
-# TXT: APK তৈরির সহজ নিয়ম
+# TXT: ব্যবহার ও APK তৈরির সহজ নিয়ম
 
-APK তৈরি হয়েছে এবং compilation, crypto unit tests ও lint পাস করেছে।
+সরাসরি APK: https://github.com/xjitroy/TXT-PAD/releases/download/preview-14/TXT-preview.apk
 
-সরাসরি ডাউনলোড: https://github.com/xjitroy/TXT-PAD/releases/download/preview-7/TXT-preview.apk
+Screenshot ও animation video: https://github.com/xjitroy/TXT-PAD/releases/tag/preview-14
 
-এটি TXT 1.0.1 debug-signed preview। Compilation, crypto tests, lint এবং Android 15 emulator-এ ৭টি পরীক্ষা পাস করেছে। বাস্তব ফোনে/OEM-এ পরীক্ষা এখনও বাকি।
+এটি TXT 1.0.2 debug-signed preview। নির্দিষ্ট build-এর পরীক্ষার ফল ও APK checksum
+VERIFICATION.json ফাইলে আছে। Compilation, crypto tests, lint এবং Android 15 emulator-এ
+১৬টি পরীক্ষা পাস করেছে। বাস্তব ফোনের সব মডেলে পরীক্ষা এখনও বাকি।
 
-Light/Dark mode ফোনের System theme অনুযায়ী বদলায়। ফাইলের ⋮ মেনুতে Open, Rename, Move ও Move to Trash আছে। উপরের Trash থেকে Restore বা স্থায়ী Delete করা যায়। Trash backup-এ থাকে না—দরকারি ফাইল আগে restore করুন।
+## ব্যবহার
 
-আগের debug APK-তে নতুনটি ইনস্টল না হলে uninstall করার আগে যাচাই করা encrypted backup নিন। Uninstall করলে Private Vault ও Trash মুছে যায়।
+1. প্রথমবার Choose workspace folder দিয়ে নিজের folder বাছুন বা তৈরি করুন।
+2. New File চাপলে keyboard খুলবে। লেখা থামানোর ১.৫ সেকেন্ড পরে Auto-save হয়—ডিফল্টে অন।
+   প্রথম লাইনের লেখা থেকে filename তৈরি হয়। উপরে Saving / Saved অবস্থা দেখা যায়।
+3. Undo / Redo চাপলে পরিবর্তিত লেখার জায়গায় যাবে এবং পরিবর্তন নির্বাচন করে দেখাবে।
+   Auto-save হলেও Undo / Redo history থাকে।
+4. নিজের নামে সেভ করতে Tools ⋯ → Save As… চাপুন। index.html, script.php, notes.txt
+   বা নিজের extension লিখে Choose location চাপুন। নতুন ফাইলে Auto-save চলবে; পুরোনোটি থাকবে।
+5. Lock দিয়ে password দিন। এরপর ওই খোলা document Auto-save হবে। Document বন্ধ করে আবার
+   খুললে password লাগবে। Password ভুলে গেলে TXT উদ্ধার করতে পারে না।
+6. Tools থেকে font size/family, word wrap, line number ও private vault-এ move পাওয়া যায়।
+   Keyboard খুললে শেষ লাইনের caret যেন দৃশ্যমান থাকে সেভাবে editor ছোট হয় ও scroll করে।
+7. ফাইলের ⋮ মেনুতে Open, Rename, Move ও Move to Trash আছে। Trash থেকে Restore বা স্থায়ী
+   Delete করা যায়। Trash backup-এ থাকে না—দরকারি ফাইল আগে restore করুন।
+8. Light/Dark mode ফোনের System theme অনুযায়ী বদলায়। Android 12+ এ glass backdrop blur,
+   moving light ও reflection আছে। পুরোনো Android-এ translucent fallback থাকে।
+9. Settings → Fingerprint / screen lock ডিফল্টে অফ। সমর্থিত hardware ও fingerprint/PIN
+   সেটআপ থাকলে অন করতে পারবেন। এই app lock ফাইলের password-এর বিকল্প নয়।
 
-## কম্পিউটার থাকলে — সবচেয়ে সহজ
+আগের debug APK-তে নতুনটি ইনস্টল না হলে uninstall করার আগে যাচাই করা encrypted backup নিন।
+Uninstall করলে Private Vault ও Trash মুছে যায়।
 
-1. https://developer.android.com/studio থেকে Android Studio ইনস্টল করুন। Setup Wizard-এ Android SDK ইনস্টল হতে দিন।
-2. TXT-project.zip আনজিপ করে Android Studio → Open → TextPad folder খুলুন।
-3. প্রথমবার ইন্টারনেট চালু রাখুন। Gradle Sync ও SDK 35 ইনস্টল শেষ হতে দিন। SDK license চাইলে গ্রহণ করুন।
-4. Build → Generate App Bundles or APKs → Generate APKs নির্বাচন করুন। Android Studio সংস্করণে মেনুর নাম সামান্য আলাদা হতে পারে।
-5. APK পাবেন app/build/outputs/apk/debug/app-debug.apk-এ। USB বা স্থানীয় ফাইল ট্রান্সফারে ফোনে নিন।
-6. ফোনে APK খুলে ইনস্টল করুন। এই debug APK পরীক্ষার জন্য; Play Store release-এর জন্য নিজের signing key লাগবে।
+## কম্পিউটার থেকে build
 
-বিকল্প Terminal command: ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-Windows-এ Android Studio-র Gradle panel থেকে একই task চালাতে পারেন; POSIX bootstrap script Windows CMD-র জন্য নয়।
+1. https://developer.android.com/studio থেকে Android Studio ইনস্টল করুন।
+2. https://github.com/xjitroy/TXT-PAD → Code → Download ZIP, unzip করে project folder খুলুন।
+3. JDK 17, Android SDK 35 ও Gradle Sync সম্পূর্ণ করুন। প্রথমবার dependency নামাতে internet লাগবে।
+4. Build → Generate App Bundles or APKs → Generate APKs নির্বাচন করুন।
+5. APK পাবেন app/build/outputs/apk/debug/app-debug.apk-এ। নিজের ফোনে নিয়ে ইনস্টল করুন।
 
-## শুধু ফোন থাকলে — GitHub Actions
+Linux/macOS Terminal: ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+Windows-এ Android Studio-র Gradle panel ব্যবহার করুন।
 
-1. GitHub account-এ একটি private repository তৈরি করুন। ZIP-এর ভিতরের TextPad folder-এর contents repo root-এ দিন: app/, settings.gradle.kts, build.gradle.kts ইত্যাদি। ZIP ফাইল একা upload করলে build হবে না।
-2. .github/workflows/android.yml ফাইলটিও একই path-এ রাখুন। ফোনে hidden folder upload অসুবিধা হলে GitHub → Add file → Create new file দিয়ে ওই পূর্ণ path লিখে project-এর workflow-এর content paste করুন।
-3. Actions → Build TXT APK → Run workflow চাপুন।
-4. সব check সবুজ হলে completed run-এর Artifacts → TXT-debug-APK ডাউনলোড করুন। Artifact ZIP খুলে APK ইনস্টল করুন।
-5. Build লাল হলে TXT-check-reports ও failed step-এর log দেখুন। পরবর্তী পরিবর্তনের build সফল হয়েছে কি না ওই run-এর ফল দেখে নিশ্চিত হোন।
+## শুধু ফোন থেকে GitHub Actions build
 
-## ইনস্টলের পর সংক্ষিপ্ত পরীক্ষা
+রিপোজিটরি আগেই আছে—নতুন repo লাগবে না। নিজের GitHub account থেকে
+https://github.com/xjitroy/TXT-PAD/actions → Build TXT APK → Run workflow চাপুন।
+সব check সবুজ হলে নতুন preview release ও APK তৈরি হবে। ব্যর্থ হলে failed step-এর log
+ও TXT-check-reports artifact দেখুন।
 
-Workspace folder বাছুন। New File → কয়েক লাইন লিখুন → Back → ফাইল আবার খুলুন। Lock দিয়ে password সেট করুন, ভুল password ব্যর্থ হয় এবং সঠিক password কাজ করে দেখুন। Private Vault-এ move করুন। Backup export করে Keep Both দিয়ে restore পরীক্ষা করুন। Settings থেকে fingerprint lock চালু/বন্ধ পরীক্ষা করুন। আসল মূল্যবান ফাইল রাখার আগে নিজের ফোনে এই পরীক্ষা করুন।
+## আসল ফাইল রাখার আগে
 
-অ্যাপের নিজস্ব network permission নেই। প্রথম build-এ dependency নামাতে ইন্টারনেট লাগে। GitHub/Android Studio-র বাইরে অ্যাপ চালাতে ইন্টারনেট লাগে না।
+নিজের ফোনে বাংলা/ইংরেজি লিখে Auto-save, keyboard, Undo / Redo ও Save As পরীক্ষা করুন।
+Lock দিয়ে সেভ করে বন্ধ করুন; সঠিক password দিয়ে খুলুন। Private Vault-এ move করুন।
+Backup export করে Keep Both দিয়ে restore যাচাই করুন। Backup ফোনের বাইরে নিরাপদ স্থানে রাখুন।
+
+অ্যাপের নিজস্ব INTERNET / ACCESS_NETWORK_STATE permission নেই। Build-এ internet লাগে,
+ইনস্টল করা অ্যাপের কাজ স্থানীয়ভাবে হয়। System file picker-এ cloud provider বাছলে সেই provider-এর
+নিজস্ব আচরণ প্রযোজ্য—সম্পূর্ণ স্থানীয় কাজের জন্য local folder বাছুন।

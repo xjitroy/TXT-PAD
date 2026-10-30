@@ -1,4 +1,6 @@
-# TXT theme and file-action fixes
+# TXT 1.0.1 theme and file-action fixes (historical)
+
+Current 1.0.2 changes and verification: [liquid-glass-editor-report.md](liquid-glass-editor-report.md).
 
 The supplied phone screenshot showed black default Text/Icon content on a dark mesh.
 MaterialTheme did not establish LocalContentColor for bare content. A root Material 3
