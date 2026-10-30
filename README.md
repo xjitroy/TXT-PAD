@@ -82,8 +82,13 @@ back reported failures; it does not claim a distributed transaction across arbit
 providers. Recovery copies are retained if rollback fails. SAF modification timestamps
 cannot generally be set; original times remain in the manifest, and vault times are restored.
 
-This delivery was source-reviewed and XML/static checks were run. This environment has
-no Android SDK, Gradle, Kotlin compiler or emulator; dependency downloads could not run.
-Therefore compilation, JUnit, Android lint, device flows, accessibility services, cold-start
-and 120 Hz frame pacing are **not verified**. Run the build command above and device QA
-before publishing. No bug-free, benchmark, external audit or production certification is claimed.
+GitHub Actions run [41014123255](https://github.com/xjitroy/TXT-PAD/actions/runs/41014123255)
+successfully executed `gradle :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`
+on commit `a020f64dd70363494fd159d8d7b8fbae2b3b498e`. The debug APK and SHA-256 file
+are published in [preview-2](https://github.com/xjitroy/TXT-PAD/releases/tag/preview-2).
+Source XML and manifest permission checks also passed. Crypto tests cover file round trips,
+password erasure, new salt/IV, wrong passwords, changed tags, chunk reordering, truncation,
+trailing data, and empty backups. Device/emulator flows, screen-reader accessibility,
+cold-start, 120 Hz pacing and independent security review remain unverified.
+This is a debug-signed preview; stable production signing and device QA are required
+before a production release. No bug-free or production certification is claimed.
