@@ -1,0 +1,115 @@
+name: Verify and publish signed artifacts
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [release/publish-request.json]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Retrieve signed public files and require successful source checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import base64,gzip,hashlib,json,os,pathlib,re,subprocess
+          request=json.loads(pathlib.Path('release/publish-request.json').read_text())
+          assert re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+',request['tag'])
+          assert re.fullmatch(r'[0-9a-f]{40}',request['source_commit'])
+          repo=os.environ['GITHUB_REPOSITORY']
+          run=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs/{int(request["verification_run"])}']))
+          assert run['conclusion']=='success' and run['head_sha']==request['source_commit'],'Source checks have not passed on this exact commit'
+          allowed={'TXT.apk','TXT.aab','SHA256SUMS','release-metadata.json','TXT-source.zip','TXT-store-assets.zip','VERIFICATION.json','mapping.txt.gz'}
+          assert set(request['files'])==allowed
+          out=pathlib.Path('dist');out.mkdir(exist_ok=True)
+          for name,entry in request['files'].items():
+              assert re.fullmatch(r'[0-9a-f]{40}',entry['blob'])
+              blob=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/git/blobs/{entry["blob"]}']))
+              data=base64.b64decode(blob['content'])
+              assert len(data)==entry['bytes'] and hashlib.sha256(data).hexdigest()==entry['sha256']
+              (out/name).write_bytes(data)
+          mapping=gzip.decompress((out/'mapping.txt.gz').read_bytes())
+          assert len(mapping)<64*1024*1024 and hashlib.sha256(mapping).hexdigest()==request['mapping_sha256']
+          (out/'mapping.txt').write_bytes(mapping)
+          PY
+      - name: Verify pinned signing identity, permissions and alignment
+        run: TXT_BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0" python3 tools/check-release.py dist/TXT.apk dist/TXT.aab --out dist/release-metadata.json
+      - name: Prepare draft for diagnostics
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TXT_TAG=$(python3 -c 'import json; print(json.load(open("release/publish-request.json"))["tag"])')
+          TXT_SOURCE=$(python3 -c 'import json; print(json.load(open("release/publish-request.json"))["source_commit"])')
+          if gh release view "$TXT_TAG" --json isDraft --jq .isDraft > /tmp/txt-draft-state; then
+            test "$(cat /tmp/txt-draft-state)" = true
+            gh release edit "$TXT_TAG" --target "$TXT_SOURCE"
+          else
+            gh release create "$TXT_TAG" --target "$TXT_SOURCE" --draft --title "TXT ${TXT_TAG#v}" --notes-file RELEASE_NOTES.md
+          fi
+          gh release upload "$TXT_TAG" dist/TXT.apk dist/TXT.aab dist/release-metadata.json dist/SHA256SUMS --clobber
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: python3 tools/release-smoke.py --apk dist/TXT.apk --out release-proof
+      - name: Complete evidence packages and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,zipfile
+          out=pathlib.Path('dist');request=json.loads(pathlib.Path('release/publish-request.json').read_text())
+          report=json.loads((out/'VERIFICATION.json').read_text())
+          report['signed_release_smoke']='PASS: real signed minified APK UI/storage/encryption/archive flows'
+          report['signed_release_workflow']=int(os.environ['GITHUB_RUN_ID'])
+          report['release_metadata']=json.loads((out/'release-metadata.json').read_text())
+          report['signed_release_result']=pathlib.Path('release-proof/RESULT.txt').read_text().strip()
+          (out/'VERIFICATION.json').write_text(json.dumps(report,indent=2)+'\n')
+          old=out/'TXT-source.zip';temp=out/'source-updated.zip'
+          with zipfile.ZipFile(old) as src,zipfile.ZipFile(temp,'w',zipfile.ZIP_DEFLATED) as dest:
+              for info in src.infolist():
+                  dest.writestr(info,(out/'VERIFICATION.json').read_bytes() if info.filename=='TXT-PAD/VERIFICATION.json' else src.read(info.filename))
+              dest.write('release-proof/RESULT.txt','TXT-PAD/docs/signed-release-result.txt')
+          temp.replace(old)
+          old=out/'TXT-store-assets.zip';temp=out/'store-updated.zip'
+          with zipfile.ZipFile(old) as src,zipfile.ZipFile(temp,'w',zipfile.ZIP_DEFLATED) as dest:
+              for info in src.infolist():dest.writestr(info,src.read(info.filename))
+              for f in pathlib.Path('release-proof').glob('*.png'):dest.write(f,'store/screenshots/'+f.name)
+          temp.replace(old)
+          names=['TXT.apk','TXT.aab','TXT-source.zip','TXT-store-assets.zip','mapping.txt','release-metadata.json','VERIFICATION.json']
+          (out/'SHA256SUMS').write_text(''.join(hashlib.sha256((out/n).read_bytes()).hexdigest()+'  '+n+'\n' for n in names))
+          PY
+          TXT_TAG=$(python3 -c 'import json; print(json.load(open("release/publish-request.json"))["tag"])')
+          gh release upload "$TXT_TAG" dist/TXT.apk dist/TXT.aab dist/TXT-source.zip dist/TXT-store-assets.zip dist/mapping.txt dist/release-metadata.json dist/SHA256SUMS dist/VERIFICATION.json release/signing-certificate.pem release-proof/*.png release-proof/*.mp4 release-proof/RESULT.txt --clobber
+          gh release edit "$TXT_TAG" --draft=false --prerelease=false --latest --title "TXT ${TXT_TAG#v}" --notes-file RELEASE_NOTES.md
+      - name: Preserve diagnostics
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p release-proof
+          adb logcat -d -b crash > release-proof/crash-log.txt || true
+          tar -czf TXT-release-diagnostics.tar.gz release-proof
+          TXT_TAG=$(python3 -c 'import json; print(json.load(open("release/publish-request.json"))["tag"])')
+          gh release upload "$TXT_TAG" TXT-release-diagnostics.tar.gz --clobber || true
