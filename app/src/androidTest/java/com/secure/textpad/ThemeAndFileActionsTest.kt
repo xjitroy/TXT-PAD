@@ -214,10 +214,11 @@ class ThemeAndFileActionsTest {
         compose.onNodeWithTag("editor.gutter").assertIsDisplayed()
         val beforeKeyboard = compose.onNodeWithTag("editor.viewport").fetchSemanticsNode().boundsInRoot.height
         compose.onNodeWithTag("editor.input").performClick()
-        compose.runOnIdle { document.select(document.value.text.length, document.value.text.length) }
         compose.waitUntil(15000) {
             compose.onNodeWithTag("editor.viewport").fetchSemanticsNode().boundsInRoot.height < beforeKeyboard - 100
         }
+        compose.onNodeWithTag("editor.input").performTextInputSelection(androidx.compose.ui.text.TextRange(document.value.text.length))
+        compose.waitForIdle()
         compose.onNodeWithTag("editor.input").performTextInput("\nশেষ লাইনে লিখছি")
         compose.waitForIdle()
         assertTrue(document.value.text.endsWith("শেষ লাইনে লিখছি"))
@@ -397,7 +398,7 @@ class ThemeAndFileActionsTest {
         compose.onNodeWithText("Redo").assertIsDisplayed()
         compose.onNodeWithText("Tools ⋯").assertIsDisplayed()
         capture("editor-light-large-text")
-        compose.onNodeWithText("Tools ⋯").performScrollTo().performClick()
+        compose.onNodeWithText("Tools ⋯").assertIsDisplayed().performClick()
         compose.onNodeWithText("Done").performScrollTo().performClick()
         compose.onNodeWithTag("editor.input").assertIsDisplayed()
     }
