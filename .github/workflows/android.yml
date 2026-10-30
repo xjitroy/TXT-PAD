@@ -1,0 +1,43 @@
+name: Build TXT APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: write
+jobs:
+  debug-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Install compile SDK
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Compile, test and lint
+        run: gradle :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: TXT-debug-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TXT-check-reports
+          path: app/build/reports/
+      - name: Publish tested preview APK
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk TXT-preview.apk
+          sha256sum TXT-preview.apk > TXT-preview.apk.sha256
+          gh release create "preview-${{ github.run_number }}" TXT-preview.apk TXT-preview.apk.sha256 --target "${{ github.sha }}" --prerelease --title "TXT Preview ${{ github.run_number }}" --notes-file RELEASE_NOTES.md

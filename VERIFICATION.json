@@ -1,0 +1,12 @@
+{
+  "xml": "All XML parses",
+  "manifest_permissions": [
+    "android.permission.USE_BIOMETRIC",
+    "android.permission.USE_FINGERPRINT"
+  ],
+  "nine_required_files": "present, ordered in SOURCE_CODE.md",
+  "placeholders": "none in required sources",
+  "gradle_build": "not run: toolchain absent and downloads unavailable",
+  "junit": "provided, not run",
+  "emulator": "not available"
+}
