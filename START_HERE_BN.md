@@ -4,9 +4,9 @@
 
 Screenshot ও animation video: https://github.com/xjitroy/TXT-PAD/releases/tag/v1.1.0
 
-এটি TXT 1.1.0-এর stable certificate দিয়ে signed release candidate। Final signed-APK smoke ও publication-এর অবস্থা docs/RELEASE_STATUS.md-এ আছে।
+এটি TXT 1.1.0-এর স্থায়ী production certificate দিয়ে signed build। Final signed-APK smoke ও publication-এর অবস্থা docs/RELEASE_STATUS.md-এ আছে।
 নির্দিষ্ট build-এর পরীক্ষার ফল ও APK checksum
-VERIFICATION.json ফাইলে আছে। Compilation, crypto tests, lint এবং Android 15 emulator-এ
+VERIFICATION.json ফাইলে আছে। Compilation, crypto tests ও lint পাস করেছে।
 Android 8 ও Android 16-এ ২৬টি করে মোট ৫২টি emulator পরীক্ষা পাস করেছে। বাস্তব ফোনের সব মডেলে পরীক্ষা এখনও বাকি।
 
 ## ব্যবহার
@@ -36,7 +36,7 @@ Uninstall করলে Private Vault ও Trash মুছে যায়।
 
 1. https://developer.android.com/studio থেকে Android Studio ইনস্টল করুন।
 2. https://github.com/xjitroy/TXT-PAD → Code → Download ZIP, unzip করে project folder খুলুন।
-3. JDK 17, Android SDK 35 ও Gradle Sync সম্পূর্ণ করুন। প্রথমবার dependency নামাতে internet লাগবে।
+3. JDK 17, Android SDK 36 ও Gradle Sync সম্পূর্ণ করুন। প্রথমবার dependency নামাতে internet লাগবে।
 4. Build → Generate App Bundles or APKs → Generate APKs নির্বাচন করুন।
 5. APK পাবেন app/build/outputs/apk/debug/app-debug.apk-এ। নিজের ফোনে নিয়ে ইনস্টল করুন।
 
@@ -46,8 +46,8 @@ Windows-এ gradlew.bat বা Android Studio-র Gradle panel ব্যবহ�
 ## শুধু ফোন থেকে GitHub Actions build
 
 রিপোজিটরি আগেই আছে—নতুন repo লাগবে না। নিজের GitHub account থেকে
-https://github.com/xjitroy/TXT-PAD/actions → Build TXT APK → Run workflow চাপুন।
-সব check সবুজ হলে নতুন preview release ও APK তৈরি হবে। ব্যর্থ হলে failed step-এর log
+https://github.com/xjitroy/TXT-PAD/actions → TXT checks → Run workflow চাপুন।
+সব check সবুজ হলে unsigned candidate তৈরি হবে। Signed release তৈরির নিয়ম docs/RELEASING.md-এ আছে। ব্যর্থ হলে failed step-এর log
 ও TXT-check-reports artifact দেখুন।
 
 ## আসল ফাইল রাখার আগে

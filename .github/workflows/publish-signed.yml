@@ -94,6 +94,7 @@ jobs:
           report=json.loads((out/'VERIFICATION.json').read_text())
           report['instrumented_tests']['status']='PASS: exact source workflow succeeded on API 26 and 36'
           report['signed_release_smoke']='PASS: real signed minified APK UI/storage/encryption/archive flows'
+          report['release_status']='PASS: verified signed APK and AAB published as the stable release'
           report['signed_release_workflow']=int(os.environ['GITHUB_RUN_ID'])
           report['release_metadata']=json.loads((out/'release-metadata.json').read_text())
           report['signed_release_result']=pathlib.Path('release-proof/RESULT.txt').read_text().strip()

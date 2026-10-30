@@ -47,7 +47,7 @@ Home filters wrap, and large-font Backup/Workspace controls stack to keep labels
 Each file's **⋮** menu provides Open, Rename, Move and Move to Trash. Rename keeps the
 current extension. Move transfers between the active workspace and private vault. Trash
 stores verified raw bytes in private app storage, preserving STXT encryption. Open Trash
-from the header or bottom dock to Restore or permanently Delete with confirmation.
+from the bottom dock to Restore or permanently Delete with confirmation.
 Restore keeps both files on filename conflicts; public files return to the active workspace.
 Trash is excluded from backups: restore needed files before exporting. Trash is removed
 on uninstall, together with the private vault.

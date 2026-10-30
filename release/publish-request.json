@@ -1,0 +1,48 @@
+{
+  "tag": "v1.1.0",
+  "source_commit": "9867349e576165969fe71b7fa15176ee4bac593c",
+  "verification_run": 41106969032,
+  "files": {
+    "TXT.apk": {
+      "blob": "df944231bad867f0a1854d95b6b2a34bb844c844",
+      "sha256": "479618b8543ff33d185f4e1f4a540a1e2184f1de6182d73e6d8b38017cd211cf",
+      "bytes": 1962552
+    },
+    "TXT.aab": {
+      "blob": "201d55b300936073aac522da3c315f542101e943",
+      "sha256": "f36606ad5be80687abcdabc2a3db76d031274101f31335cb66fd6e399408b12f",
+      "bytes": 4066395
+    },
+    "SHA256SUMS": {
+      "blob": "87198814dd4d194712b1a0e7e76beea64a3db0c9",
+      "sha256": "b7211c1c4f8c5cc97ccd3189b9c2bfdb023b4f32e56a4f996db2d0140bef6ad2",
+      "bytes": 148
+    },
+    "release-metadata.json": {
+      "blob": "71b01f6c6b1e2b5b5fbbfc4c275f3ff03b11468e",
+      "sha256": "a10efc1c71e13558567fca156d915d8215bb0de44ceca3b46f14df71a51e26dd",
+      "bytes": 850
+    },
+    "TXT-source.zip": {
+      "blob": "a977bc2ddda6887203c77f085e94bf2c0545cd58",
+      "sha256": "4930bae12a5f10e7820461fafa1e70995478be909069127890f7d2a5a42542d2",
+      "bytes": 2386799
+    },
+    "TXT-store-assets.zip": {
+      "blob": "a5ba542f50fa1da0a19064ee845f6e132ac01d46",
+      "sha256": "78978b9d362f6f2d2716ed4d55187b7c919dd3d0fb2c1966530dfaefb6ea7c49",
+      "bytes": 2205146
+    },
+    "VERIFICATION.json": {
+      "blob": "bcc6fdfea166e31dde35fb6ac676fa7110e8535a",
+      "sha256": "ed25f1227c03766af31c9c758f2418dd920800ff5c0396ed4e737ec3e4b4ac8c",
+      "bytes": 2543
+    },
+    "mapping.txt.gz": {
+      "blob": "49176e845163536aa67bc260cac88749b560f368",
+      "sha256": "78f0b36f008fde0f8af8bac3110a2a2924fa6a4cd8e21d061ea511a888600253",
+      "bytes": 2234295
+    }
+  },
+  "mapping_sha256": "921197edc0fc5eec801da19ca3973980b5730b2bb32d4094a8b16ccbe6f23aee"
+}
