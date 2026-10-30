@@ -49,7 +49,7 @@ jobs:
           p=pathlib.Path(os.environ['TXT_SIGNING_STORE'])
           p.write_bytes(base64.b64decode(os.environ['TXT_KEYSTORE_BASE64'],validate=True));p.chmod(0o600)
           PY
-          gradle :app:assembleRelease :app:bundleRelease :app:testReleaseUnitTest :app:lintRelease --stacktrace
+          ./gradlew :app:assembleRelease :app:bundleRelease :app:testReleaseUnitTest :app:lintRelease --stacktrace
       - name: Verify release artifacts
         run: |
           mkdir -p dist

@@ -2,7 +2,7 @@
 # Keep screenshots and crash evidence even if an instrumentation assertion fails.
 set -uo pipefail
 adb shell settings put secure show_ime_with_hard_keyboard 1
-gradle :app:connectedDebugAndroidTest --stacktrace
+./gradlew :app:connectedDebugAndroidTest --stacktrace
 TXT_QA_EXIT=$?
 mkdir -p app/build/outputs/ui-screenshots
 python3 - <<'PY_QA'

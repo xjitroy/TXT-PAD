@@ -11,7 +11,8 @@ ads, remote APIs, account requirement or cloud backup integration.
 Open this directory in Android Studio with JDK 17 or 21 and install Android SDK 36.
 Let Gradle sync, then run the `app` configuration. On Linux/macOS with curl, unzip
 and sha256sum: `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintRelease`.
-The source-only bootstrap downloads and checksum-checks Gradle 8.11.1. Build dependencies
+The standard Gradle wrapper (including gradlew.bat on Windows) pins Gradle 8.11.1 with a
+distribution SHA-256; its JAR was checked against Gradle's official published checksum. Build dependencies
 need network on first sync; the installed app works offline. Alternatively use a local
 Gradle 8.11.1 installation. Production updates must reuse the stable TXT signing identity. See [RELEASING.md](docs/RELEASING.md); its private key is not in this repository.
 

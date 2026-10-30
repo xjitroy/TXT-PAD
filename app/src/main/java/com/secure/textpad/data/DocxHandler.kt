@@ -36,7 +36,10 @@ object DocxHandler {
                             "tab" -> text.append('\t')
                             "br", "cr" -> text.append('\n')
                         }
-                        if (event == XmlPullParser.TEXT && inText) text.append(parser.text)
+                        if (inText && (event == XmlPullParser.TEXT || event == XmlPullParser.CDSECT ||
+                                event == XmlPullParser.ENTITY_REF || event == XmlPullParser.IGNORABLE_WHITESPACE)) {
+                            text.append(parser.text ?: error("Unresolved XML entity in document text."))
+                        }
                         if (event == XmlPullParser.END_TAG && parser.namespace == WORD && parser.name == "t") inText = false
                         require(text.length <= MAX_TEXT) { "Document exceeds the editor's 2 million character limit." }
                         event = parser.nextToken()
