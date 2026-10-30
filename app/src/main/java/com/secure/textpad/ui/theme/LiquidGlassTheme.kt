@@ -239,7 +239,7 @@ fun Modifier.liquidGlassCard(interactionSource: MutableInteractionSource? = null
                     layer.draw(it.nativeCanvas, size, origin.value, scene, phase, pressure)
                 }
                 // The tint guarantees readable text while the moving light remains visible underneath.
-                drawRect(colors.surface.copy(alpha = if (layer == null) 0.88f else if (dark) 0.62f else 0.68f))
+                drawRect(colors.surface.copy(alpha = if (layer == null) 0.88f else 0.72f))
                 val shift = sin(phase) * size.width * 0.25f
                 drawRect(Brush.linearGradient(
                     listOf(Color.White.copy(alpha = if (dark) 0.13f else 0.40f), Color.White.copy(alpha = 0.025f), Color.Transparent),
@@ -249,8 +249,7 @@ fun Modifier.liquidGlassCard(interactionSource: MutableInteractionSource? = null
                     listOf(Color.Transparent, Color.White.copy(alpha = 0.06f + pressure * 0.12f), Color.Transparent),
                     start = Offset(size.width * (0.35f + sin(phase) * 0.40f), 0f),
                     end = Offset(size.width * (0.8f + sin(phase) * 0.40f), size.height)))
-                drawRoundRect(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.72f + pressure * 0.18f), Color.White.copy(alpha = 0.04f),
-                    colors.primary.copy(alpha = 0.38f), Color.White.copy(alpha = 0.30f))),
+                drawRoundRect(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.45f + pressure * 0.18f), Color.White.copy(alpha = 0.06f))),
                     cornerRadius = corner, style = Stroke(stroke))
                 if (size.width > inset * 2 && size.height > inset * 2) drawRoundRect(
                     Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.20f + pressure * 0.20f), Color.Transparent, Color.Black.copy(alpha = 0.10f))),

@@ -70,11 +70,35 @@ class ThemeAndFileActionsTest {
         val additionalOutput = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
         val destination = (additionalOutput?.let(::File) ?: File(context.filesDir, "qa")).apply { mkdirs() }
         File(destination, "$name-semantics.txt").writeText(compose.onRoot().printToString())
-        // Capture the actual device compositor, including GPU RenderNode blur and the IME.
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-        val bitmap = checkNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
-        try { File(destination, "$name.png").outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) } }
-        finally { bitmap.recycle() }
+        // Semantics can be ready before SurfaceFlinger has presented the first GPU frame.
+        // Require a committed frame, then reject uniform starting-window captures.
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val committed = java.util.concurrent.CountDownLatch(1)
+        instrumentation.runOnMainSync {
+            val decor = compose.activity.window.decorView
+            decor.viewTreeObserver.registerFrameCommitCallback { committed.countDown() }
+            decor.postInvalidateOnAnimation()
+        }
+        assertTrue("The screenshot requires a presented app frame", committed.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        var bitmap: Bitmap? = null
+        val deadline = android.os.SystemClock.uptimeMillis() + 10000
+        while (bitmap == null && android.os.SystemClock.uptimeMillis() < deadline) {
+            android.os.SystemClock.sleep(120)
+            val candidate = instrumentation.uiAutomation.takeScreenshot() ?: continue
+            var darkest = 255
+            var brightest = 0
+            for (row in 0 until 32) for (column in 0 until 64) {
+                val pixel = candidate.getPixel(candidate.width * (column + 1) / 65,
+                    candidate.height * (12 + row) / 100)
+                val light = (android.graphics.Color.red(pixel) + android.graphics.Color.green(pixel) + android.graphics.Color.blue(pixel)) / 3
+                darkest = minOf(darkest, light)
+                brightest = maxOf(brightest, light)
+            }
+            if (brightest - darkest >= 100) bitmap = candidate else candidate.recycle()
+        }
+        val presented = checkNotNull(bitmap) { "Compositor did not present readable app content for $name" }
+        try { File(destination, "$name.png").outputStream().use { check(presented.compress(Bitmap.CompressFormat.PNG, 100, it)) } }
+        finally { presented.recycle() }
     }
     @Test fun darkHomeIsReadableAndHasFileActions() {
         home(true)
