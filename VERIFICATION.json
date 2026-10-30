@@ -6,7 +6,11 @@
   ],
   "nine_required_files": "present, ordered in SOURCE_CODE.md",
   "placeholders": "none in required sources",
-  "gradle_build": "not run: toolchain absent and downloads unavailable",
-  "junit": "provided, not run",
-  "emulator": "not available"
+  "gradle_build": "PASS on GitHub Actions run 41014123255, commit a020f64dd70363494fd159d8d7b8fbae2b3b498e",
+  "junit": "PASS: :app:testDebugUnitTest",
+  "emulator": "not run",
+  "lint": "PASS: :app:lintDebug",
+  "apk": "https://github.com/xjitroy/TXT-PAD/releases/download/preview-2/TXT-preview.apk",
+  "sha256": "b9b588c628a226db54d218d2871448dc2ef8a99bf94a529ca2b5f73626eef4a6",
+  "production_signing": "not configured; debug-signed preview"
 }
