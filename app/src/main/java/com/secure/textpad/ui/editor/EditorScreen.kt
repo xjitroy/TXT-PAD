@@ -5,6 +5,10 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.EditText
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import com.secure.textpad.ui.theme.LocalGlassMotionEnabled
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -155,6 +159,7 @@ fun EditorScreen(
     onSaveAs: (String, Boolean) -> Unit,
     onSensitivePrompt: (Boolean) -> Unit
 ) {
+    val motion = LocalGlassMotionEnabled.current
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) { if (doc.fresh) { focus.requestFocus(); keyboard?.show() } }
@@ -201,7 +206,10 @@ fun EditorScreen(
             IconButton(onClick = onBack, enabled = !busy && !saving) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back to files") }
             Column(Modifier.weight(1f)) {
                 Text(doc.file.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
-                Text(if (doc.saveFailure) "Save failed · use Save As" else if (saving) "Saving…" else if (busy) "Working…" else if (doc.dirty) "Unsaved changes" else "Saved on this device", style = MaterialTheme.typography.labelSmall)
+                val saveLabel = if (doc.saveFailure) "Save failed · use Save As" else if (saving) "Saving…" else if (busy) "Working…" else if (doc.dirty) "Unsaved changes" else "Saved on this device"
+                Crossfade(saveLabel, animationSpec = if (motion) tween(130) else snap(), label = "save status") { label ->
+                    Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
             IconButton(onClick = { doc.undo() }, enabled = !busy && doc.canUndo, modifier = Modifier.testTag("editor.undo")) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.AutoMirrored.Outlined.Undo, "Undo", Modifier.size(20.dp)); Text("Undo", style = MaterialTheme.typography.labelSmall) }

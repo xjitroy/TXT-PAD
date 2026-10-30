@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    paths-ignore: ['docs/**', 'store/**', '**/*.md', 'VERIFICATION.json', 'release/verify-request.json']
   pull_request:
 permissions:
   contents: read

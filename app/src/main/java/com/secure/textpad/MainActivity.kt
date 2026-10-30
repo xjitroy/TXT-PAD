@@ -41,6 +41,7 @@ import com.secure.textpad.ui.home.HomeScreen
 import com.secure.textpad.ui.home.TrashScreen
 import com.secure.textpad.ui.theme.LiquidGlassTheme
 import com.secure.textpad.ui.theme.liquidGlass
+import com.secure.textpad.ui.theme.LocalGlassMotionEnabled
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -313,8 +314,9 @@ class MainActivity : FragmentActivity() {
             }
             return
         }
+        val navigationMotion = LocalGlassMotionEnabled.current
         AnimatedContent(targetState = vm.editor, contentKey = { it?.sessionId ?: "home" }, label = "document expansion",
-            transitionSpec = { (fadeIn(tween(180)) + slideInVertically(animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.88f, stiffness = 420f), initialOffsetY = { it / 24 })).togetherWith(fadeOut(tween(120))) }) { doc ->
+            transitionSpec = { if (!navigationMotion) EnterTransition.None.togetherWith(ExitTransition.None) else (fadeIn(tween(180)) + slideInVertically(animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.88f, stiffness = 420f), initialOffsetY = { it / 24 })).togetherWith(fadeOut(tween(120))) }) { doc ->
             if (doc == null && vm.showTrash) TrashScreen(vm.trash, vm.busy,
                 onBack = { vm.showTrash = false }, onRestore = vm::restoreTrash, onDelete = vm::deleteTrash)
             else if (doc == null) HomeScreen(vm.files, vm.busy, vm.workspace, vm.defaultPrivate, appLock,
