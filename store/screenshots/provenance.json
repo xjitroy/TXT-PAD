@@ -1,0 +1,7 @@
+{
+  "source": "Android 16 compositor screenshots of production UI composables under instrumentation",
+  "workflow_run": 41106969032,
+  "source_commit": "9867349e576165969fe71b7fa15176ee4bac593c",
+  "data": "Synthetic documents, no private user data",
+  "scope": "Exact final application source; separate minified/signed APK smoke evidence is recorded by publication workflow"
+}

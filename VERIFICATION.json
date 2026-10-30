@@ -1,51 +1,70 @@
 {
-  "xml": "PASS: 8 source XML files parse",
-  "manifest_permissions": [
-    "android.permission.USE_BIOMETRIC",
-    "android.permission.USE_FINGERPRINT"
+  "app_version": "1.1.0 (4)",
+  "source_commit": "9867349e576165969fe71b7fa15176ee4bac593c",
+  "source_input_hashes": "PASS: 29 compilation/test/resource/configuration inputs match this GitHub source tree",
+  "local_build": "PASS: JDK 17, Gradle 8.11.1, SDK 36; assembleRelease, bundleRelease, assembleDebugAndroidTest, testDebugUnitTest, lintRelease",
+  "junit": [
+    {
+      "suite": "com.secure.textpad.CryptoEngineTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    }
   ],
-  "nine_required_files": "present, regenerated in order in SOURCE_CODE.md, with supporting SessionPassword.kt",
-  "placeholders": "none in required sources",
-  "gradle_build": "PASS: assembleDebug, assembleDebugAndroidTest, testDebugUnitTest, lintDebug",
-  "junit": "PASS: :app:testDebugUnitTest",
-  "emulator": "PASS: 16 Android 15 x86_64 instrumented tests, 0 skipped / 0 failed",
-  "lint": "PASS: :app:lintDebug",
-  "apk": "https://github.com/xjitroy/TXT-PAD/releases/download/preview-14/TXT-preview.apk",
-  "sha256": "c1a94dfd25d3c96de1ed9bf9598f7fd20264a37b8c712241aacc51ae97d1b32b",
-  "production_signing": "not configured; debug-signed preview",
-  "workflow_run": 41086574711,
-  "commit": "04ae9dbb62fc40b654fcee84460abf6c587ef3ff",
-  "visual_review": "Inspected preview-14 compositor screenshots of home light/dark/1.6x font and editor with actual IME; the caret and last Bengali line are visible. Inspected first-launch animation recording frames.",
+  "official_bundletool": "PASS: Google bundletool 1.18.3 validate",
+  "release_metadata": {
+    "package": "com.secure.textpad",
+    "versionCode": 4,
+    "versionName": "1.1.0",
+    "minSdk": 26,
+    "targetSdk": 36,
+    "signingCertificateSha256": "8e857dbb69fe4df9759d10f23ebc5da3111cce95a7b8a1efb5ef554057bf1036",
+    "networkPermissions": false,
+    "apkSignature": "verified",
+    "aabSignature": "verified",
+    "native64Bit16KiBAlignment": "verified",
+    "nativeLibraries": [
+      "lib/arm64-v8a/libandroidx.graphics.path.so",
+      "lib/armeabi-v7a/libandroidx.graphics.path.so",
+      "lib/x86/libandroidx.graphics.path.so",
+      "lib/x86_64/libandroidx.graphics.path.so"
+    ],
+    "files": {
+      "TXT.apk": {
+        "bytes": 1962552,
+        "sha256": "479618b8543ff33d185f4e1f4a540a1e2184f1de6182d73e6d8b38017cd211cf"
+      },
+      "TXT.aab": {
+        "bytes": 4066395,
+        "sha256": "f36606ad5be80687abcdabc2a3db76d031274101f31335cb66fd6e399408b12f"
+      }
+    }
+  },
+  "instrumented_tests": {
+    "status": "PASS: 26 cases on API 26 and 26 cases on API 36; all jobs succeeded",
+    "workflow_run": 41106969032,
+    "expected_cases_per_api": 26,
+    "apis": [
+      26,
+      36
+    ]
+  },
+  "previous_green_emulator_suite": {
+    "source": "fbbea769b938617e39a64e985e857a0628f42b36",
+    "workflow_run": 41096654789,
+    "cases_per_api": 25,
+    "apis": [
+      26,
+      36
+    ],
+    "note": "Historical baseline; final source is verified by workflow 41106969032"
+  },
+  "signed_release_smoke": "PENDING: exact signed APK UI, file grants, passwords, vault, Trash and backup restore",
+  "release_status": "Source and local signed artifacts verified; signed APK smoke and stable publication pending",
+  "external_incident": "https://stspg.io/5cd2m4n59spv",
+  "private_signing_key": "Owner-only recovery kit outside repository; public certificate only is published",
   "physical_devices": "not tested",
+  "talkback": "not tested",
   "security_audit": "not independently audited",
-  "performance_120hz": "not measured",
-  "source_bundle": "SOURCE_CODE.md: regenerated from the nine requested files plus SessionPassword.kt",
-  "apk_signing_note": "CI-generated debug key; stable production signing remains required",
-  "app_version": "1.0.2 (3)",
-  "packaged_manifest_network_permissions": "PASS: inspected binary manifest in downloaded APK; no INTERNET or ACCESS_NETWORK_STATE",
-  "packaged_debug_permissions": [
-    "android.permission.DUMP",
-    "android.permission.USE_BIOMETRIC",
-    "android.permission.USE_FINGERPRINT"
-  ],
-  "release": "https://github.com/xjitroy/TXT-PAD/releases/tag/preview-14",
-  "downloaded_apk_sha256": "MATCH: local downloaded APK hash equals the GitHub release asset digest",
-  "motion_recording": "https://github.com/xjitroy/TXT-PAD/releases/download/preview-14/TXT-glass-motion.mp4",
-  "motion_recording_scope": "8-second recording of actual APK first launch, including startup and the animated setup glass; not every app flow",
-  "features_tested": [
-    "line-number and IME caret visibility",
-    "Undo/Redo selection and reveal",
-    "typing during save",
-    "default plain auto-save",
-    "unlocked encrypted auto-save",
-    "late IME commit during save-and-leave",
-    "RAM credential clearing",
-    "Save As filename callback and UTF-8 output for PHP/HTML/custom extensions",
-    "file menus",
-    "private rename and Trash recovery",
-    "encrypted Trash round trip",
-    "fallback themes and root foreground contrast"
-  ],
-  "screen_reader": "not tested",
-  "dynamic_palette_scope": "screenshots use fallback palette; motion uses emulator Material You; OEM palettes not exhaustively tested"
+  "performance_120hz": "not measured"
 }

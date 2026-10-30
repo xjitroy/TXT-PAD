@@ -13,6 +13,8 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -41,6 +43,7 @@ jobs:
               time.sleep(15)
           allowed={'TXT.apk','TXT.aab','SHA256SUMS','release-metadata.json','TXT-source.zip','TXT-store-assets.zip','VERIFICATION.json','mapping.txt.gz'}
           assert set(request['files'])==allowed
+          subprocess.run(['git','diff','--exit-code',request['source_commit'],'HEAD','--','app/src','app/build.gradle.kts','build.gradle.kts','settings.gradle.kts','gradle.properties','gradle','gradlew','gradlew.bat'],check=True)
           out=pathlib.Path('dist');out.mkdir(exist_ok=True)
           for name,entry in request['files'].items():
               assert re.fullmatch(r'[0-9a-f]{40}',entry['blob'])
@@ -95,10 +98,14 @@ jobs:
           report['release_metadata']=json.loads((out/'release-metadata.json').read_text())
           report['signed_release_result']=pathlib.Path('release-proof/RESULT.txt').read_text().strip()
           (out/'VERIFICATION.json').write_text(json.dumps(report,indent=2)+'\n')
+          pathlib.Path('docs/RELEASE_STATUS.md').write_text('# TXT '+report['release_metadata']['versionName']+' release status\n\nPASS: source checks, local build, signatures, permissions, alignment and actual signed APK smoke.\n\nSource: `'+request['source_commit']+'`\n\nSource checks: https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs/'+str(request['verification_run'])+'\n\nSigned APK proof: https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs/'+os.environ['GITHUB_RUN_ID']+'\n\n'+report['signed_release_result']+'\n\nPhysical devices, TalkBack, 120 Hz and independent security audit remain unverified.\n')
+          pathlib.Path('docs/signed-release-result.txt').write_text(report['signed_release_result']+'\n')
+          pathlib.Path('VERIFICATION.json').write_text((out/'VERIFICATION.json').read_text())
           old=out/'TXT-source.zip';temp=out/'source-updated.zip'
           with zipfile.ZipFile(old) as src,zipfile.ZipFile(temp,'w',zipfile.ZIP_DEFLATED) as dest:
               for info in src.infolist():
-                  dest.writestr(info,(out/'VERIFICATION.json').read_bytes() if info.filename=='TXT-PAD/VERIFICATION.json' else src.read(info.filename))
+                  payload=(out/'VERIFICATION.json').read_bytes() if info.filename=='TXT-PAD/VERIFICATION.json' else pathlib.Path('docs/RELEASE_STATUS.md').read_bytes() if info.filename=='TXT-PAD/docs/RELEASE_STATUS.md' else src.read(info.filename)
+                  dest.writestr(info,payload)
               dest.write('release-proof/RESULT.txt','TXT-PAD/docs/signed-release-result.txt')
           temp.replace(old)
           old=out/'TXT-store-assets.zip';temp=out/'store-updated.zip'
@@ -111,7 +118,18 @@ jobs:
           PY
           TXT_TAG=$(python3 -c 'import json; print(json.load(open("release/publish-request.json"))["tag"])')
           gh release upload "$TXT_TAG" dist/TXT.apk dist/TXT.aab dist/TXT-source.zip dist/TXT-store-assets.zip dist/mapping.txt dist/release-metadata.json dist/SHA256SUMS dist/VERIFICATION.json release/signing-certificate.pem release-proof/*.png release-proof/*.mp4 release-proof/RESULT.txt --clobber
-          gh release edit "$TXT_TAG" --draft=false --prerelease=false --latest --title "TXT ${TXT_TAG#v}" --notes-file RELEASE_NOTES.md
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add VERIFICATION.json docs/RELEASE_STATUS.md docs/signed-release-result.txt
+          git commit -m "Record verified TXT $TXT_TAG signed release [skip ci]"
+          git push origin HEAD:main
+          TXT_RELEASE_COMMIT=$(git rev-parse HEAD)
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TXT_TAG" > /tmp/txt-tag.json 2>/dev/null; then
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$TXT_TAG" -f sha="$TXT_RELEASE_COMMIT" -F force=false
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TXT_TAG" -f sha="$TXT_RELEASE_COMMIT"
+          fi
+          gh release edit "$TXT_TAG" --target "$TXT_RELEASE_COMMIT" --draft=false --prerelease=false --latest --title "TXT ${TXT_TAG#v}" --notes-file RELEASE_NOTES.md
       - name: Preserve diagnostics
         if: always()
         env:

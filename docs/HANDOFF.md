@@ -2,7 +2,7 @@
 
 This repository is the complete Android Studio project. It is not a web mockup or a generated
 APK-only delivery. The latest versioned release and VERIFICATION.json identify the exact
-source/build that was tested. Read AGENTS.md and ARCHITECTURE.md first.
+source/build that was tested. Current publication state: [RELEASE_STATUS.md](RELEASE_STATUS.md). Read AGENTS.md and ARCHITECTURE.md first.
 
 ## Where to make changes
 

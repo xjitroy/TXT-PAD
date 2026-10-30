@@ -1,12 +1,13 @@
 # TXT: ব্যবহার ও APK তৈরির সহজ নিয়ম
 
-সরাসরি APK: https://github.com/xjitroy/TXT-PAD/releases/download/preview-14/TXT-preview.apk
+সরাসরি APK: https://github.com/xjitroy/TXT-PAD/releases/download/v1.1.0/TXT.apk
 
-Screenshot ও animation video: https://github.com/xjitroy/TXT-PAD/releases/tag/preview-14
+Screenshot ও animation video: https://github.com/xjitroy/TXT-PAD/releases/tag/v1.1.0
 
-এটি TXT 1.0.2 debug-signed preview। নির্দিষ্ট build-এর পরীক্ষার ফল ও APK checksum
+এটি TXT 1.1.0-এর stable certificate দিয়ে signed release candidate। Final signed-APK smoke ও publication-এর অবস্থা docs/RELEASE_STATUS.md-এ আছে।
+নির্দিষ্ট build-এর পরীক্ষার ফল ও APK checksum
 VERIFICATION.json ফাইলে আছে। Compilation, crypto tests, lint এবং Android 15 emulator-এ
-১৬টি পরীক্ষা পাস করেছে। বাস্তব ফোনের সব মডেলে পরীক্ষা এখনও বাকি।
+Android 8 ও Android 16-এ ২৬টি করে মোট ৫২টি emulator পরীক্ষা পাস করেছে। বাস্তব ফোনের সব মডেলে পরীক্ষা এখনও বাকি।
 
 ## ব্যবহার
 
@@ -40,7 +41,7 @@ Uninstall করলে Private Vault ও Trash মুছে যায়।
 5. APK পাবেন app/build/outputs/apk/debug/app-debug.apk-এ। নিজের ফোনে নিয়ে ইনস্টল করুন।
 
 Linux/macOS Terminal: ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-Windows-এ Android Studio-র Gradle panel ব্যবহার করুন।
+Windows-এ gradlew.bat বা Android Studio-র Gradle panel ব্যবহার করুন।
 
 ## শুধু ফোন থেকে GitHub Actions build
 
@@ -58,3 +59,13 @@ Backup export করে Keep Both দিয়ে restore যাচাই করু
 অ্যাপের নিজস্ব INTERNET / ACCESS_NETWORK_STATE permission নেই। Build-এ internet লাগে,
 ইনস্টল করা অ্যাপের কাজ স্থানীয়ভাবে হয়। System file picker-এ cloud provider বাছলে সেই provider-এর
 নিজস্ব আচরণ প্রযোজ্য—সম্পূর্ণ স্থানীয় কাজের জন্য local folder বাছুন।
+
+## Play Store ও পরের update
+
+Release-এর TXT.aab Play Console-এ জমা দিন। TXT-store-assets.zip-এ logo, feature graphic,
+screenshots ও listing text আছে। Privacy policy ও Console-এর owner-only কাজ docs/PLAY_STORE.md-এ দেখুন।
+আপনার real contact/account তথ্য ও Play review GitHub build দিয়ে পূরণ হয় না।
+
+পরের agent/AI-কে AGENTS.md, docs/HANDOFF.md ও docs/RELEASING.md পড়তে বলুন। একই signing key
+ব্যবহার করতে হবে। Private signing kit বা password কোনো public repo/release/issue-তে দেবেন না।
+GitHub Actions secrets না থাকলেও local signing + public artifact staging workflow ব্যবহার করা যায়।
