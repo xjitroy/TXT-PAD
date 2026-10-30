@@ -79,11 +79,11 @@ class ThemeAndFileActionsTest {
         compose.onNodeWithText("TXT").assertIsDisplayed()
         compose.onNodeWithText("Private Vault").assertIsDisplayed()
         capture("home-dark")
-        compose.onNodeWithContentDescription("File options: Meeting notes.txt").performClick()
+        compose.onNodeWithContentDescription("File options: Meeting notes.txt").performScrollTo().performClick()
         compose.onNodeWithText("Rename").assertIsDisplayed()
         compose.onNodeWithText("Move to…").assertIsDisplayed()
-        compose.onNodeWithText("Move to Trash").assertIsDisplayed()
-        compose.onNodeWithText("Rename").performClick()
+        compose.onNodeWithText("Move to Trash").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Rename").performScrollTo().performClick()
         compose.onNodeWithText("Rename file").assertIsDisplayed()
     }
     @Test fun lightHomeScreenshot() { home(false); capture("home-light") }

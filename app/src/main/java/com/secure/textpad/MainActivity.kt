@@ -156,7 +156,11 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
                     doc.clear(); editor = null
                     viewModelScope.launch { kotlinx.coroutines.yield(); action?.invoke() }
                 }
-            } catch (e: Exception) { report(e) }
+            } catch (e: Exception) {
+                doc.saveFailure = true
+                if (encrypted && password == null) doc.setSession(null)
+                report(e)
+            }
             finally { sealed?.clear(); actualPassword?.fill('\u0000'); password?.fill('\u0000'); saving = false }
         }
     }

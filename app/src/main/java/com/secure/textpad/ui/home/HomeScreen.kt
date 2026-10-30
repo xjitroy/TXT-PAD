@@ -16,6 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,6 +36,8 @@ fun HomeScreen(
     onPrivateDefault: (Boolean) -> Unit, onAppLock: (Boolean) -> Unit, onRefresh: () -> Unit,
     onRename: (PadFile, String) -> Unit, onTrash: (PadFile) -> Unit, onShowTrash: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     var search by remember { mutableStateOf("") }
     var filter by remember { mutableIntStateOf(0) }
     var settings by remember { mutableStateOf(false) }
@@ -171,7 +175,7 @@ fun HomeScreen(
                         Text(formatSize(file.size) + if (file.modified > 0) " · " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(file.modified)) else "",
                             color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     }
-                    IconButton(onClick = { options = file }, enabled = !busy) {
+                    IconButton(onClick = { focusManager.clearFocus(); keyboard?.hide(); options = file }, enabled = !busy) {
                         Icon(Icons.Outlined.MoreVert, "File options: ${file.name}")
                     }
                 }
@@ -180,7 +184,7 @@ fun HomeScreen(
     }
     options?.let { file ->
         ModalBottomSheet(modifier = Modifier.liquidGlass(), containerColor = Color.Transparent, onDismissRequest = { options = null }) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
                 Text(file.name, style = MaterialTheme.typography.titleLarge)
                 TextButton(onClick = { options = null; onOpen(file) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Icon(Icons.Outlined.Description, null); Spacer(Modifier.width(8.dp)); Text("Open") }
                 TextButton(onClick = { options = null; rename = file }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Icon(Icons.Outlined.Edit, null); Spacer(Modifier.width(8.dp)); Text("Rename") }

@@ -66,6 +66,7 @@ class EditorDocument(file: PadFile, text: String, locked: Boolean, fresh: Boolea
         private set
     var sessionPassword: SessionPassword? = null
     var hasSessionPassword by mutableStateOf(false)
+    var saveFailure by mutableStateOf(false)
     var historyChange by mutableStateOf<TextRange?>(null)
     var fresh by mutableStateOf(fresh)
     val dirty: Boolean get() = fresh || value.text != baseline
@@ -103,7 +104,7 @@ class EditorDocument(file: PadFile, text: String, locked: Boolean, fresh: Boolea
     fun undo() { if (undo.isNotEmpty()) { redo.addLast(value.copy(composition = null)); restoreHistory(undo.removeLast()) } }
     fun redo() { if (redo.isNotEmpty()) { undo.addLast(value.copy(composition = null)); restoreHistory(redo.removeLast()) } }
     fun setSession(password: SessionPassword?) { sessionPassword?.clear(); sessionPassword = password; hasSessionPassword = password != null }
-    fun saved(file: PadFile, text: String, encrypted: Boolean) { this.file = file; baseline = text; this.encrypted = encrypted; fresh = false }
+    fun saved(file: PadFile, text: String, encrypted: Boolean) { this.file = file; baseline = text; this.encrypted = encrypted; fresh = false; saveFailure = false }
     fun clear() { setSession(null); undo.clear(); redo.clear(); value = TextFieldValue(); baseline = ""; revision++ }
 }
 
@@ -177,11 +178,11 @@ fun EditorScreen(
             "$lines lines · $words words · ${text.codePointCount(0, text.length)} chars"
         }
     }
-    LaunchedEffect(doc.value.text, autoSave, busy, saving, doc.hasSessionPassword) {
-        if (autoSave && (!doc.encrypted || doc.hasSessionPassword) && doc.dirty && !busy && !saving) { delay(1500); onSave(doc.encrypted, null) }
+    LaunchedEffect(doc.value.text, autoSave, busy, saving, doc.hasSessionPassword, doc.saveFailure) {
+        if (autoSave && (!doc.encrypted || doc.hasSessionPassword) && doc.dirty && !busy && !saving && !doc.saveFailure) { delay(1500); onSave(doc.encrypted, null) }
     }
     BackHandler(onBack = onBack)
-    fun save() { if (doc.encrypted && !doc.hasSessionPassword) password = true else onSave(doc.encrypted, null) }
+    fun save() { doc.saveFailure = false; if (doc.encrypted && !doc.hasSessionPassword) password = true else onSave(doc.encrypted, null) }
     fun navigate(delta: Int) {
         if (result.hits.isEmpty() || result.source != doc.value.text) return
         current = Math.floorMod(current + delta, result.hits.size)
@@ -192,7 +193,7 @@ fun EditorScreen(
             IconButton(onClick = onBack, enabled = !busy && !saving) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back to files") }
             Column(Modifier.weight(1f)) {
                 Text(doc.file.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
-                Text(if (saving) "Saving…" else if (busy) "Working…" else if (doc.dirty) "Unsaved changes" else "Saved on this device", style = MaterialTheme.typography.labelSmall)
+                Text(if (doc.saveFailure) "Save failed · use Save As" else if (saving) "Saving…" else if (busy) "Working…" else if (doc.dirty) "Unsaved changes" else "Saved on this device", style = MaterialTheme.typography.labelSmall)
             }
             IconButton(onClick = { doc.undo() }, enabled = !busy && doc.canUndo, modifier = Modifier.testTag("editor.undo")) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.AutoMirrored.Outlined.Undo, "Undo", Modifier.size(20.dp)); Text("Undo", style = MaterialTheme.typography.labelSmall) }

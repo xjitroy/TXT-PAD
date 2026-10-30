@@ -14,6 +14,24 @@ for file in Path('app/build/outputs').rglob('*'):
         shutil.copy2(file, out / file.name)
 print('Captured screenshots:', len(list(out.glob('*.png'))))
 PY_QA
+if [ "$TXT_QA_EXIT" -ne 0 ]; then
+python3 - <<'PY_FAILURE'
+from html.parser import HTMLParser
+from pathlib import Path
+class FailureText(HTMLParser):
+    def __init__(self):
+        super().__init__(); self.active = False; self.text = []
+    def handle_starttag(self, tag, attrs):
+        if tag == 'pre': self.active = True
+    def handle_endtag(self, tag):
+        if tag == 'pre': self.active = False
+    def handle_data(self, data):
+        if self.active: self.text.append(data)
+for report in Path('app/build/reports/androidTests').rglob('com.secure.textpad*.html'):
+    parser = FailureText(); parser.feed(report.read_text())
+    print(''.join(parser.text))
+PY_FAILURE
+fi
 adb logcat -d -b crash > app/build/outputs/ui-screenshots/crash-log.txt || true
 if [ "$TXT_QA_EXIT" -eq 0 ]; then
     adb install -r app/build/outputs/apk/debug/app-debug.apk > /dev/null
