@@ -1,6 +1,8 @@
 package com.secure.textpad.ui.home
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.horizontalScroll
@@ -62,15 +64,28 @@ fun HomeScreen(
         return
     }
     val colors = MaterialTheme.colorScheme
+    val fabInteraction = remember { MutableInteractionSource() }
+    val dockInteraction = remember { MutableInteractionSource() }
     Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, contentColor = colors.onSurface,
         floatingActionButton = {
-            FloatingActionButton(onClick = onCreate, modifier = Modifier.heightIn(min = 64.dp).widthIn(min = 160.dp),
-                containerColor = colors.primary, contentColor = colors.onPrimary) {
+            FloatingActionButton(onClick = onCreate, modifier = Modifier.heightIn(min = 64.dp).widthIn(min = 160.dp).liquidGlass(fabInteraction),
+                containerColor = Color.Transparent, contentColor = colors.onSurface, interactionSource = fabInteraction,
+                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)) {
                 Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(Icons.Outlined.Add, null)
                     Text("New File", style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
                 }
             }
+        },
+        bottomBar = {
+            Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Row(Modifier.fillMaxWidth().liquidGlass(dockInteraction).padding(horizontal = 4.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    TextButton(onClick = { filter = 0; search = "" }, modifier = Modifier.weight(1f), interactionSource = dockInteraction) { Text("Files") }
+                    TextButton(onClick = { filter = 4 }, modifier = Modifier.weight(1f), interactionSource = dockInteraction) { Text("Vault") }
+                    TextButton(onClick = onShowTrash, modifier = Modifier.weight(1f), interactionSource = dockInteraction) { Text("Trash") }
+                }
+            }
+
         }
     ) { padding ->
         // The complete header scrolls with the list on short screens / enlarged fonts.
@@ -140,7 +155,8 @@ fun HomeScreen(
                 }
             }
             items(visible, key = { it.uri.toString() }) { file ->
-                Row(Modifier.fillMaxWidth().liquidGlass().clickable(enabled = !busy) { onOpen(file) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                val interaction = remember(file.uri) { MutableInteractionSource() }
+                Row(Modifier.fillMaxWidth().animateItem().liquidGlass(interaction).clickable(interactionSource = interaction, indication = null, enabled = !busy) { onOpen(file) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), color = colors.primaryContainer) {
                         Icon(if (file.encrypted == true) Icons.Outlined.Lock else Icons.Outlined.Description,
                             null, Modifier.padding(10.dp).size(22.dp), tint = colors.onPrimaryContainer)
@@ -163,7 +179,7 @@ fun HomeScreen(
         }
     }
     options?.let { file ->
-        ModalBottomSheet(onDismissRequest = { options = null }) {
+        ModalBottomSheet(modifier = Modifier.liquidGlass(), containerColor = Color.Transparent, onDismissRequest = { options = null }) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
                 Text(file.name, style = MaterialTheme.typography.titleLarge)
                 TextButton(onClick = { options = null; onOpen(file) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Icon(Icons.Outlined.Description, null); Spacer(Modifier.width(8.dp)); Text("Open") }
@@ -175,27 +191,27 @@ fun HomeScreen(
     }
     rename?.let { file ->
         var name by remember(file.uri) { mutableStateOf(file.name) }
-        AlertDialog(onDismissRequest = { rename = null }, title = { Text("Rename file") }, text = {
+        AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { rename = null }, title = { Text("Rename file") }, text = {
             OutlinedTextField(name, { name = it }, label = { Text("Filename") }, supportingText = { Text("Keep the same extension. Use Save As to change format.") })
         }, confirmButton = { TextButton(onClick = { rename = null; onRename(file, name.trim()) }, enabled = name.isNotBlank()) { Text("Rename") } },
             dismissButton = { TextButton(onClick = { rename = null }) { Text("Cancel") } })
     }
-    move?.let { file -> AlertDialog(onDismissRequest = { move = null }, title = { Text("Move file") }, text = {
+    move?.let { file -> AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { move = null }, title = { Text("Move file") }, text = {
         Text(if (file.vault) "Move this file to the active workspace? Other apps with folder access may see it." else "Move this file to the private vault? It will be hidden from ordinary file managers.")
     }, confirmButton = { TextButton(onClick = { move = null; onMove(file) }, enabled = !file.vault || workspace) { Text(if (file.vault) "Move to workspace" else "Move to private vault") } },
         dismissButton = { TextButton(onClick = { move = null }) { Text("Cancel") } }) }
-    trash?.let { file -> AlertDialog(onDismissRequest = { trash = null }, title = { Text("Move to Trash?") }, text = {
+    trash?.let { file -> AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { trash = null }, title = { Text("Move to Trash?") }, text = {
         Text("${file.name} will leave its folder. You can restore it from Trash later. Locked files keep their password protection.")
     }, confirmButton = { TextButton(onClick = { trash = null; onTrash(file) }) { Text("Move to Trash") } },
         dismissButton = { TextButton(onClick = { trash = null }) { Text("Cancel") } }) }
-    if (backup) AlertDialog(onDismissRequest = { backup = false }, title = { Text("Backup & restore") }, text = {
+    if (backup) AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { backup = false }, title = { Text("Backup & restore") }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Keep a .tpbak copy outside this phone before resetting it. You will need its master password on your next device.")
             FilledTonalButton(onClick = { backup = false; onBackup() }, modifier = Modifier.fillMaxWidth()) { Text("Create full offline backup") }
             OutlinedButton(onClick = { backup = false; onRestore() }, modifier = Modifier.fillMaxWidth()) { Text("Restore offline backup") }
         }
     }, confirmButton = { TextButton(onClick = { backup = false }) { Text("Close") } })
-    if (settings) AlertDialog(onDismissRequest = { settings = false }, title = { Text("TXT settings") }, text = {
+    if (settings) AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { settings = false }, title = { Text("TXT settings") }, text = {
         Column(Modifier.verticalScroll(rememberScrollState())) {
             Text("Appearance follows your device’s Light / Dark setting.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) { Text("New files in private vault", Modifier.weight(1f)); Switch(defaultPrivate, onPrivateDefault) }
@@ -247,7 +263,7 @@ fun TrashScreen(files: List<TrashItem>, busy: Boolean, onBack: () -> Unit, onRes
             }
         }
     }
-    deleting?.let { file -> AlertDialog(onDismissRequest = { deleting = null }, title = { Text("Delete permanently?") },
+    deleting?.let { file -> AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { deleting = null }, title = { Text("Delete permanently?") },
         text = { Text("${file.name} cannot be restored after this. This removes only its Trash copy.") },
         confirmButton = { TextButton(onClick = { deleting = null; onDelete(file) }) { Text("Delete permanently") } },
         dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } }) }

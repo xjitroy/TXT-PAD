@@ -75,7 +75,7 @@ class StorageRepository(private val context: Context) {
     }
 
     private fun supported(name: String) = name.substringAfterLast('.', "").lowercase() in
-        setOf("txt", "md", "log", "json", "xml", "csv", "html", "css", "js", "kt", "py", "ini", "cfg", "docx", "stxt", "enc", "tpbak")
+        setOf("txt", "md", "log", "json", "xml", "csv", "html", "php", "css", "js", "kt", "py", "ini", "cfg", "docx", "stxt", "enc", "tpbak") || name.substringAfterLast('.', "").lowercase() in prefs.getStringSet("text_extensions", emptySet()).orEmpty()
 
     suspend fun scan(all: Boolean = false): List<PadFile> = withContext(Dispatchers.IO) { scanNow(all) }
     private fun scanNow(all: Boolean): List<PadFile> {
@@ -144,6 +144,8 @@ class StorageRepository(private val context: Context) {
 
     private fun createNow(path: String, private: Boolean, unique: Boolean): PadFile {
         validatePath(path)
+        val extension = path.substringAfterLast('.', "").lowercase()
+        prefs.edit().putStringSet("text_extensions", prefs.getStringSet("text_extensions", emptySet()).orEmpty() + extension).apply()
         var chosen = path
         var count = 1
         while (find(chosen, private) != null) {
@@ -201,6 +203,8 @@ class StorageRepository(private val context: Context) {
                     try { stage.writeBytes(protected) } finally { protected.fill(0) }
                 } else stage.writeBytes(bytes)
                 writeNow(file, stage)
+                val extension = file.name.substringAfterLast('.', "").lowercase()
+                prefs.edit().putStringSet("text_extensions", prefs.getStringSet("text_extensions", emptySet()).orEmpty() + extension).apply()
                 file.copy(size = stage.length(), modified = System.currentTimeMillis(), encrypted = encrypted)
             } finally { bytes?.fill(0); password?.fill('\u0000'); stage.delete() }
         }

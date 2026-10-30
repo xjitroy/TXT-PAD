@@ -10,6 +10,13 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.graphics.Color
+import com.secure.textpad.security.SessionPassword
+import kotlin.math.roundToInt
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -56,6 +63,9 @@ class EditorDocument(file: PadFile, text: String, locked: Boolean, fresh: Boolea
         private set
     var encrypted by mutableStateOf(locked)
         private set
+    var sessionPassword: SessionPassword? = null
+    var hasSessionPassword by mutableStateOf(false)
+    var historyChange by mutableStateOf<TextRange?>(null)
     var fresh by mutableStateOf(fresh)
     val dirty: Boolean get() = fresh || value.text != baseline
     private val undo = ArrayDeque<TextFieldValue>()
@@ -67,6 +77,7 @@ class EditorDocument(file: PadFile, text: String, locked: Boolean, fresh: Boolea
     fun edit(next: TextFieldValue) {
         if (next.text.length > DocxHandler.MAX_TEXT) return
         if (next.text != value.text) {
+            historyChange = null
             undo.addLast(value.copy(composition = null)); redo.clear()
             var bytes = undo.sumOf { it.text.length.toLong() * 2 }
             while (undo.size > 100 || bytes > 16L * 1024 * 1024) bytes -= undo.removeFirst().text.length * 2L
@@ -75,10 +86,24 @@ class EditorDocument(file: PadFile, text: String, locked: Boolean, fresh: Boolea
         value = next
     }
     fun select(start: Int, end: Int) { value = value.copy(selection = TextRange(start, end), composition = null) }
-    fun undo() { if (undo.isNotEmpty()) { redo.addLast(value.copy(composition = null)); value = undo.removeLast(); revision++ } }
-    fun redo() { if (redo.isNotEmpty()) { undo.addLast(value.copy(composition = null)); value = redo.removeLast(); revision++ } }
+    private fun restoreHistory(target: TextFieldValue) {
+        val before = value.text
+        val after = target.text
+        var start = 0
+        val common = minOf(before.length, after.length)
+        while (start < common && before[start] == after[start]) start++
+        var endBefore = before.length
+        var endAfter = after.length
+        while (endBefore > start && endAfter > start && before[endBefore - 1] == after[endAfter - 1]) { endBefore--; endAfter-- }
+        historyChange = TextRange(start, endAfter)
+        value = target.copy(selection = TextRange(start.coerceAtMost(after.length), endAfter), composition = null)
+        revision++
+    }
+    fun undo() { if (undo.isNotEmpty()) { redo.addLast(value.copy(composition = null)); restoreHistory(undo.removeLast()) } }
+    fun redo() { if (redo.isNotEmpty()) { undo.addLast(value.copy(composition = null)); restoreHistory(redo.removeLast()) } }
+    fun setSession(password: SessionPassword?) { sessionPassword?.clear(); sessionPassword = password; hasSessionPassword = password != null }
     fun saved(file: PadFile, text: String, encrypted: Boolean) { this.file = file; baseline = text; this.encrypted = encrypted; fresh = false }
-    fun clear() { undo.clear(); redo.clear(); value = TextFieldValue(); baseline = ""; revision++ }
+    fun clear() { setSession(null); undo.clear(); redo.clear(); value = TextFieldValue(); baseline = ""; revision++ }
 }
 
 private data class Hit(val start: Int, val end: Int)
@@ -114,15 +139,18 @@ private fun search(text: String, query: String, case: Boolean, regex: Boolean): 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditorScreen(
-    doc: EditorDocument, busy: Boolean, onBack: () -> Unit,
+    doc: EditorDocument, busy: Boolean, saving: Boolean = false, onBack: () -> Unit,
     onSave: (Boolean, CharArray?) -> Unit, onMove: () -> Unit,
-    onSaveAs: (String, CharArray?) -> Unit,
+    onSaveAs: (String, Boolean) -> Unit,
     onSensitivePrompt: (Boolean) -> Unit
 ) {
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) { if (doc.fresh) { focus.requestFocus(); keyboard?.show() } }
-    var exportPassword by remember { mutableStateOf(false) }
+    val toolbarInteraction = remember { MutableInteractionSource() }
+    var saveAs by remember { mutableStateOf(false) }
+    var fileName by remember { mutableStateOf("") }
+    var saveAsEncrypted by remember { mutableStateOf(false) }
     var wrap by remember { mutableStateOf(true) }
     var numbers by remember { mutableStateOf(false) }
     var size by remember { mutableIntStateOf(16) }
@@ -134,7 +162,7 @@ fun EditorScreen(
     var case by remember { mutableStateOf(false) }
     var regex by remember { mutableStateOf(false) }
     var current by remember { mutableIntStateOf(0) }
-    var autoSave by remember { mutableStateOf(false) }
+    var autoSave by remember { mutableStateOf(true) }
     var password by remember { mutableStateOf(false) }
     var plainConfirm by remember { mutableStateOf(false) }
     val result by produceState(SearchResult(), doc.value.text, query, case, regex, finding) {
@@ -148,11 +176,11 @@ fun EditorScreen(
             "$lines lines · $words words · ${text.codePointCount(0, text.length)} chars"
         }
     }
-    LaunchedEffect(doc.value.text, autoSave, busy) {
-        if (autoSave && !doc.encrypted && doc.dirty && !busy) { delay(1800); onSave(false, null) }
+    LaunchedEffect(doc.value.text, autoSave, busy, saving, doc.hasSessionPassword) {
+        if (autoSave && (!doc.encrypted || doc.hasSessionPassword) && doc.dirty && !busy && !saving) { delay(1500); onSave(doc.encrypted, null) }
     }
     BackHandler(onBack = onBack)
-    fun save() { if (doc.encrypted) password = true else onSave(false, null) }
+    fun save() { if (doc.encrypted && !doc.hasSessionPassword) password = true else onSave(doc.encrypted, null) }
     fun navigate(delta: Int) {
         if (result.hits.isEmpty() || result.source != doc.value.text) return
         current = Math.floorMod(current + delta, result.hits.size)
@@ -160,18 +188,17 @@ fun EditorScreen(
     }
     Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 12.dp)) {
         Row(Modifier.fillMaxWidth().liquidGlass().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack, enabled = !busy) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back to files") }
+            IconButton(onClick = onBack, enabled = !busy && !saving) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back to files") }
             Column(Modifier.weight(1f)) {
                 Text(doc.file.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
-                Text(if (busy) "Working…" else if (doc.dirty) "Unsaved changes" else "Saved on this device", style = MaterialTheme.typography.labelSmall)
+                Text(if (saving) "Saving…" else if (busy) "Working…" else if (doc.dirty) "Unsaved changes" else "Saved on this device", style = MaterialTheme.typography.labelSmall)
             }
-            IconButton(onClick = onMove, enabled = !busy && !doc.dirty) { Icon(if (doc.file.vault) Icons.Outlined.FolderOpen else Icons.Outlined.Shield, if (doc.file.vault) "Move to workspace" else "Move to private vault") }
-        }
-        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).liquidGlass().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { save() }, enabled = !busy) { Icon(Icons.Outlined.Save, null); Spacer(Modifier.width(5.dp)); Text("Save") }
-            TextButton(onClick = { password = true }, enabled = !busy) { Icon(Icons.Outlined.Lock, null); Spacer(Modifier.width(5.dp)); Text("Lock") }
-            TextButton(onClick = { finding = !finding }) { Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(5.dp)); Text("Find") }
-            TextButton(onClick = { tools = true }) { Icon(Icons.Outlined.Tune, null); Text("Tools ⋯") }
+            IconButton(onClick = { doc.undo() }, enabled = !busy && doc.canUndo, modifier = Modifier.testTag("editor.undo")) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.AutoMirrored.Outlined.Undo, "Undo", Modifier.size(20.dp)); Text("Undo", style = MaterialTheme.typography.labelSmall) }
+            }
+            IconButton(onClick = { doc.redo() }, enabled = !busy && doc.canRedo, modifier = Modifier.testTag("editor.redo")) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.AutoMirrored.Outlined.Redo, "Redo", Modifier.size(20.dp)); Text("Redo", style = MaterialTheme.typography.labelSmall) }
+            }
         }
         if (finding) Column(Modifier.fillMaxWidth().liquidGlass().padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -205,34 +232,77 @@ fun EditorScreen(
         val vertical = rememberScrollState()
         val horizontal = rememberScrollState()
         var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+        var viewport by remember { mutableStateOf(IntSize.Zero) }
+        var fieldWidth by remember { mutableIntStateOf(0) }
+        val density = LocalDensity.current
+        val imeBottom = WindowInsets.ime.getBottom(density)
         val font = when (family) { 1 -> FontFamily.SansSerif; 2 -> FontFamily.Serif; else -> FontFamily.Monospace }
         val textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = size.sp, lineHeight = (size * 1.5f).sp, fontFamily = font)
-        val color = MaterialTheme.colorScheme.onSurfaceVariant
-        val density = LocalDensity.current
-        Row(Modifier.weight(1f).fillMaxWidth().padding(vertical = 8.dp).liquidGlass().padding(12.dp).verticalScroll(vertical)) {
-            if (numbers) {
-                val text = doc.value.text
-                val starts = remember(text) { buildList { add(0); text.forEachIndexed { i, c -> if (c == '\n') add(i + 1) } } }
-                val height = with(density) { (layout?.size?.height ?: 0).toDp() }
-                val paint = remember(color, size, density) { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    this.color = android.graphics.Color.argb((color.alpha * 255).toInt(), (color.red * 255).toInt(), (color.green * 255).toInt(), (color.blue * 255).toInt())
-                    textSize = with(density) { size.sp.toPx() }; typeface = android.graphics.Typeface.MONOSPACE
-                } }
-                Canvas(Modifier.width(52.dp).height(height)) {
-                    layout?.let { l ->
-                        starts.forEachIndexed { index, offset ->
-                            val line = l.getLineForOffset(offset.coerceAtMost(text.length))
-                            val top = l.getLineTop(line)
-                            if (top >= vertical.value - 80 && top <= vertical.value + vertical.viewportSize + 80)
+        val gutterColor = MaterialTheme.colorScheme.onSurfaceVariant
+        val margin = with(density) { 30.dp.toPx() }
+        LaunchedEffect(doc.value.text, doc.value.selection, layout, viewport, imeBottom, wrap, numbers) {
+            withFrameNanos { }
+            val result = layout ?: return@LaunchedEffect
+            if (viewport.height <= 0 || result.layoutInput.text.text != doc.value.text) return@LaunchedEffect
+            val cursor = result.getCursorRect((if (doc.historyChange != null) doc.value.selection.start else doc.value.selection.end).coerceIn(0, doc.value.text.length))
+            val target = when {
+                cursor.bottom + margin > vertical.value + viewport.height -> cursor.bottom + margin - viewport.height
+                cursor.top - margin < vertical.value -> cursor.top - margin
+                else -> vertical.value.toFloat()
+            }
+            vertical.scrollTo(target.roundToInt().coerceIn(0, vertical.maxValue))
+            if (!wrap && fieldWidth > 0) {
+                val x = when {
+                    cursor.right + margin > horizontal.value + fieldWidth -> cursor.right + margin - fieldWidth
+                    cursor.left - margin < horizontal.value -> cursor.left - margin
+                    else -> horizontal.value.toFloat()
+                }
+                horizontal.scrollTo(x.roundToInt().coerceIn(0, horizontal.maxValue))
+            }
+        }
+        Box(Modifier.weight(1f).fillMaxWidth().padding(top = 8.dp).liquidGlass().padding(12.dp)
+            .testTag("editor.viewport").onSizeChanged { viewport = it }) {
+            Row(Modifier.fillMaxWidth().verticalScroll(vertical).padding(bottom = 40.dp)) {
+                if (numbers) {
+                    val text = doc.value.text
+                    val starts = remember(text) { buildList { add(0); text.forEachIndexed { i, c -> if (c == '\n') add(i + 1) } } }
+                    val height = with(density) { (layout?.size?.height ?: 0).toDp() }
+                    val paint = remember(gutterColor, size, density) { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                        color = gutterColor.toArgb(); textSize = with(density) { size.sp.toPx() }; typeface = android.graphics.Typeface.MONOSPACE
+                    } }
+                    Canvas(Modifier.width(52.dp).height(height)) {
+                        layout?.let { l ->
+                            val top = vertical.value.toFloat()
+                            val firstLine = l.getLineForVerticalPosition(top.coerceAtLeast(0f))
+                            val firstOffset = l.getLineStart(firstLine)
+                            var index = starts.binarySearch(firstOffset).let { if (it >= 0) it else (-it - 2).coerceAtLeast(0) }
+                            while (index < starts.size) {
+                                val line = l.getLineForOffset(starts[index].coerceAtMost(text.length))
+                                if (l.getLineTop(line) > top + viewport.height + 80) break
                                 drawContext.canvas.nativeCanvas.drawText((index + 1).toString(), 0f, l.getLineBaseline(line), paint)
+                                index++
+                            }
                         }
                     }
                 }
+                Box(Modifier.weight(1f).onSizeChanged { fieldWidth = it.width }
+                    .then(if (!wrap) Modifier.horizontalScroll(horizontal) else Modifier)) {
+                    BasicTextField(value = doc.value, onValueChange = { doc.edit(it) },
+                        modifier = Modifier.fillMaxWidth().widthIn(min = with(density) { fieldWidth.toDp() }).focusRequester(focus).defaultMinSize(minHeight = 240.dp).testTag("editor.input"),
+                        readOnly = busy, textStyle = textStyle, cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        onTextLayout = { layout = it })
+                }
             }
-            val fieldModifier = Modifier.weight(1f).then(if (!wrap) Modifier.horizontalScroll(horizontal) else Modifier)
-            BasicTextField(value = doc.value, onValueChange = { doc.edit(it) }, modifier = fieldModifier.focusRequester(focus).defaultMinSize(minHeight = 240.dp),
-                readOnly = busy, textStyle = textStyle, cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                onTextLayout = { layout = it })
+        }
+        doc.historyChange?.let { change ->
+            Text("History change at character ${change.start + 1}" + if (change.collapsed) " · text removed" else " · changed text selected",
+                Modifier.padding(top = 4.dp, start = 8.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        }
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).liquidGlass(toolbarInteraction).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { save() }, enabled = !busy && !saving, interactionSource = toolbarInteraction) { Icon(Icons.Outlined.Save, null); Spacer(Modifier.width(5.dp)); Text("Save") }
+            TextButton(onClick = { password = true }, enabled = !busy && !saving, interactionSource = toolbarInteraction) { Icon(Icons.Outlined.Lock, null); Spacer(Modifier.width(5.dp)); Text("Lock") }
+            TextButton(onClick = { finding = !finding }, interactionSource = toolbarInteraction) { Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(5.dp)); Text("Find") }
+            TextButton(onClick = { tools = true }, interactionSource = toolbarInteraction) { Icon(Icons.Outlined.Tune, null); Text("Tools ⋯") }
         }
         Text("$stats\nUTF-8 · ${if (doc.encrypted) "Encrypted" else "Plain"} · ${if (doc.file.vault) "Private vault" else "Workspace"}",
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall)
@@ -240,12 +310,12 @@ fun EditorScreen(
     if (password) PasswordDialog(title = if (doc.encrypted) "Password to save" else "Lock this document", confirm = !doc.encrypted,
         onDismiss = { password = false }, onSensitive = onSensitivePrompt,
         onPassword = { password = false; onSave(true, it) })
-    if (tools) ModalBottomSheet(onDismissRequest = { tools = false }) {
+    if (tools) ModalBottomSheet(modifier = Modifier.liquidGlass(), containerColor = Color.Transparent, onDismissRequest = { tools = false }) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp)) {
             Text("Tools", style = MaterialTheme.typography.titleLarge)
             Row {
-                TextButton(onClick = { doc.undo() }, enabled = !busy && doc.canUndo) { Text("Undo") }
-                TextButton(onClick = { doc.redo() }, enabled = !busy && doc.canRedo) { Text("Redo") }
+                TextButton(onClick = { doc.undo(); tools = false }, enabled = !busy && doc.canUndo) { Text("Undo") }
+                TextButton(onClick = { doc.redo(); tools = false }, enabled = !busy && doc.canRedo) { Text("Redo") }
             }
             Row(verticalAlignment = Alignment.CenterVertically) { Text("Word wrap", Modifier.weight(1f)); Switch(wrap, { wrap = it }) }
             Text("Comfort font size · ${size}sp")
@@ -253,13 +323,11 @@ fun EditorScreen(
             TextButton(onClick = { tools = false; onMove() }, enabled = !busy && !doc.dirty) { Text(if (doc.file.vault) "Move to workspace" else "Isolate from other apps") }
             Text("Save As", style = MaterialTheme.typography.labelLarge)
             Row {
-                TextButton(onClick = { tools = false; onSaveAs("txt", null) }, enabled = !busy) { Text(".txt") }
-                TextButton(onClick = { tools = false; onSaveAs("docx", null) }, enabled = !busy) { Text(".docx") }
-                TextButton(onClick = { tools = false; exportPassword = true }, enabled = !busy) { Text(".stxt") }
+                TextButton(onClick = { tools = false; fileName = if (doc.fresh) "Untitled.txt" else doc.file.name; saveAsEncrypted = doc.encrypted; saveAs = true }, enabled = !busy) { Text("Save As…") }
             }
             Text(stats + " · UTF-8", style = MaterialTheme.typography.bodySmall)
             Row(verticalAlignment = Alignment.CenterVertically) { Text("Line numbers", Modifier.weight(1f)); Switch(numbers, { numbers = it }) }
-            Row(verticalAlignment = Alignment.CenterVertically) { Text("Auto-save plain files", Modifier.weight(1f)); Switch(autoSave, { autoSave = it }, enabled = !doc.encrypted) }
+            Row(verticalAlignment = Alignment.CenterVertically) { Text("Auto-save", Modifier.weight(1f)); Switch(autoSave, { autoSave = it }) }
             Text("Font family", style = MaterialTheme.typography.labelLarge)
             listOf("Monospace", "Sans serif", "Serif").forEachIndexed { i, name -> TextButton(onClick = { family = i }) { Text(if (family == i) "✓ $name" else name) } }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -272,9 +340,18 @@ fun EditorScreen(
             TextButton(onClick = { tools = false }) { Text("Done") }
         }
     }
-    if (exportPassword) PasswordDialog("Password for .stxt copy", confirm = true, onDismiss = { exportPassword = false }, onSensitive = onSensitivePrompt,
-        onPassword = { exportPassword = false; onSaveAs("stxt", it) })
-    if (plainConfirm) AlertDialog(onDismissRequest = { plainConfirm = false }, title = { Text("Save without encryption?") },
+    if (saveAs) AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { saveAs = false }, title = { Text("Save As") }, text = {
+        Column {
+            OutlinedTextField(fileName, { fileName = it }, label = { Text("Filename and extension") }, singleLine = true,
+                supportingText = { Text("Any text filename: index.html, script.php, notes.txt, or your own extension. DOCX exports paragraph text.") })
+            Row(verticalAlignment = Alignment.CenterVertically) { Text("Password protection", Modifier.weight(1f)); Switch(saveAsEncrypted, { saveAsEncrypted = it }) }
+        }
+    }, confirmButton = { TextButton(onClick = {
+        saveAs = false
+        onSaveAs(fileName.trim(), saveAsEncrypted || fileName.endsWith(".stxt", true) || fileName.endsWith(".enc", true))
+    }, enabled = fileName.isNotBlank() && fileName.length <= 240 && fileName.none { it == '/' || it == '\\' || it.code < 32 }) { Text("Choose location") } },
+        dismissButton = { TextButton(onClick = { saveAs = false }) { Text("Cancel") } })
+    if (plainConfirm) AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { plainConfirm = false }, title = { Text("Save without encryption?") },
         text = { Text("The saved file will no longer need a password. Anyone who can access its folder can read it.") },
         confirmButton = { TextButton(onClick = { plainConfirm = false; onSave(false, null) }) { Text("Save plain file") } },
         dismissButton = { TextButton(onClick = { plainConfirm = false }) { Text("Cancel") } })
@@ -295,7 +372,7 @@ fun PasswordDialog(title: String, confirm: Boolean = false, onDismiss: () -> Uni
         onDispose { first?.text?.clear(); second?.text?.clear(); onSensitive(false) }
     }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)) {
-        Surface(shape = MaterialTheme.shapes.extraLarge) {
+        Surface(modifier = Modifier.liquidGlass(), shape = MaterialTheme.shapes.extraLarge, color = Color.Transparent) {
             Column(Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
                 Text(title, style = MaterialTheme.typography.titleLarge)
                 if (confirm) Text("Use a long, unique password. TXT cannot recover it.", Modifier.padding(vertical = 12.dp))

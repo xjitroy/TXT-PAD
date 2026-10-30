@@ -35,6 +35,9 @@ import com.secure.textpad.ui.home.TrashScreen
 import com.secure.textpad.ui.theme.LiquidGlassTheme
 import com.secure.textpad.ui.theme.liquidGlass
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.secure.textpad.security.SessionPassword
 import java.security.KeyStore
 import java.security.SecureRandom
 import java.text.SimpleDateFormat
@@ -52,6 +55,7 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
     var showTrash by mutableStateOf(false)
     var editor by mutableStateOf<EditorDocument?>(null); private set
     var busy by mutableStateOf(false); private set
+    var saving by mutableStateOf(false); private set
     var notice by mutableStateOf<String?>(null)
     var unlockFile by mutableStateOf<PadFile?>(null)
     var workspace by mutableStateOf(repository.workspace != null); private set
@@ -75,7 +79,7 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
         files = detected
     }
     fun navigate(action: () -> Unit) {
-        if (busy) return
+        if (busy || saving) return
         if (editor?.dirty == true) pendingNavigation = action else { editor?.clear(); editor = null; action() }
     }
     fun discardAndNavigate() {
@@ -92,8 +96,13 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
         val file = unlockFile ?: run { password.fill('\u0000'); return }
         unlockFile = null
         runOperation {
-            try { editor = EditorDocument(file, repository.readText(file, password), true) }
-            finally { password.fill('\u0000') }
+            var sealed: SessionPassword? = null
+            try {
+                sealed = withContext(Dispatchers.IO) { SessionPassword.seal(password.copyOf()) }
+                val text = repository.readText(file, password)
+                editor = EditorDocument(file, text, true).also { it.setSession(sealed) }
+                sealed = null
+            } finally { sealed?.clear(); password.fill('\u0000') }
         }
     }
     fun newFile() {
@@ -101,42 +110,48 @@ class PadViewModel(app: Application) : AndroidViewModel(app) {
         editor = EditorDocument(PadFile(Uri.EMPTY, "New document", repository.defaultPrivate || !workspace, path = ""), "", false, fresh = true)
     }
     fun back() {
-        if (busy) return
+        if (busy || saving) return
         val doc = editor
         if (doc?.fresh == true && !doc.encrypted) { pendingNavigation = { refresh() }; save(false, null, true) }
         else navigate { refresh() }
     }
-    fun saveAs(extension: String, password: CharArray?) {
+    fun saveAs(uri: Uri, password: CharArray?) {
         val doc = editor
-        if (busy || doc == null) { password?.fill('\u0000'); return }
+        if (busy || saving || doc == null) { password?.fill('\u0000'); return }
+        val text = doc.value.text
         runOperation {
-            var created: PadFile? = null
             try {
-                created = repository.create(repository.autoTitle(doc.value.text, extension), doc.file.vault)
-                val f = repository.save(created, doc.value.text, extension == "stxt", password)
-                notice = "Saved copy: ${f.name}"
+                val destination = repository.external(uri)
+                repository.save(destination, text, password != null, password)
+                notice = "Saved copy: ${destination.name}"
                 reload()
             } finally { password?.fill('\u0000') }
         }
     }
     fun save(encrypted: Boolean, password: CharArray?, navigateAfter: Boolean = false) {
         val doc = editor
-        if (busy || doc == null) { password?.fill('\u0000'); return }
+        if (busy || saving || doc == null) { password?.fill('\u0000'); return }
         val text = doc.value.text
-        runOperation {
+        saving = true
+        viewModelScope.launch {
+            var sealed: SessionPassword? = null
+            var actualPassword: CharArray? = password
             try {
+                if (encrypted && password != null) sealed = withContext(Dispatchers.IO) { SessionPassword.seal(password.copyOf()) }
+                if (encrypted && actualPassword == null) actualPassword = withContext(Dispatchers.IO) { doc.sessionPassword?.open() }
                 val target = if (doc.fresh) repository.create(repository.autoTitle(text, if (encrypted) "stxt" else "txt"), doc.file.vault) else doc.file
-                val saved = repository.save(target, text, encrypted, password)
+                val saved = repository.save(target, text, encrypted, actualPassword)
                 doc.saved(saved, text, encrypted)
-                
-                reload()
+                if (!encrypted) doc.setSession(null)
+                else if (sealed != null) { doc.setSession(sealed); sealed = null }
+                files = (files.filterNot { it.uri == saved.uri } + saved).sortedByDescending { it.modified }
                 if (navigateAfter) {
                     val action = pendingNavigation; pendingNavigation = null
                     doc.clear(); editor = null
-                    // runOperation is busy until it returns, so dispatch navigation on the next frame.
                     viewModelScope.launch { kotlinx.coroutines.yield(); action?.invoke() }
                 }
-            } finally { password?.fill('\u0000') }
+            } catch (e: Exception) { report(e) }
+            finally { sealed?.clear(); actualPassword?.fill('\u0000'); password?.fill('\u0000'); saving = false }
         }
     }
     fun move(file: PadFile) = runOperation {
@@ -234,19 +249,24 @@ class MainActivity : FragmentActivity() {
         var restoreUri by remember { mutableStateOf<Uri?>(null) }
         var restorePassword by remember { mutableStateOf(false) }
         var conflict by remember { mutableStateOf(ConflictPolicy.KEEP_BOTH) }
+        var saveAsUri by remember { mutableStateOf<Uri?>(null) }
+        var saveAsEncrypted by remember { mutableStateOf(false) }
         var saveBeforeLeaving by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
         val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { it?.let(vm::folder) }
         val backupPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { backupUri = it }
         val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { restoreUri = it }
-        val secure = appLock || vm.busy || sensitive || vm.editor?.encrypted == true || vm.unlockFile != null || !unlocked || backupUri != null || restorePassword
+        val exportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+            if (uri != null) { if (saveAsEncrypted) saveAsUri = uri else vm.saveAs(uri, null) }
+        }
+        val secure = appLock || vm.saving || saveAsUri != null || vm.busy || sensitive || vm.editor?.encrypted == true || vm.unlockFile != null || !unlocked || backupUri != null || restorePassword
         SideEffect {
             if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         }
-        LaunchedEffect(incoming, unlocked, vm.busy) {
+        LaunchedEffect(incoming, unlocked, vm.busy, vm.saving) {
             val uri = incoming
-            if (uri != null && unlocked && !vm.busy) {
+            if (uri != null && unlocked && !vm.busy && !vm.saving) {
                 incoming = null
                 scope.launch {
                     try {
@@ -270,7 +290,7 @@ class MainActivity : FragmentActivity() {
             return
         }
         AnimatedContent(targetState = vm.editor, contentKey = { it?.file?.uri?.toString() ?: "home" }, label = "document expansion",
-            transitionSpec = { (fadeIn(tween(160))).togetherWith(fadeOut(tween(120))) }) { doc ->
+            transitionSpec = { (fadeIn(tween(180)) + slideInVertically(animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.88f, stiffness = 420f), initialOffsetY = { it / 24 })).togetherWith(fadeOut(tween(120))) }) { doc ->
             if (doc == null && vm.showTrash) TrashScreen(vm.trash, vm.busy,
                 onBack = { vm.showTrash = false }, onRestore = vm::restoreTrash, onDelete = vm::deleteTrash)
             else if (doc == null) HomeScreen(vm.files, vm.busy, vm.workspace, vm.defaultPrivate, appLock,
@@ -281,15 +301,18 @@ class MainActivity : FragmentActivity() {
                 onPrivateDefault = { vm.defaultPrivate = it; vm.repository.defaultPrivate = it },
                 onAppLock = { enable -> authenticate { appLock = enable; unlocked = true; prefs.edit().putBoolean("app_lock", enable).apply() } },
                 onRefresh = vm::refresh, onRename = vm::rename, onTrash = vm::trash, onShowTrash = { vm.showTrash = true; vm.refresh() })
-            else EditorScreen(doc, vm.busy, onBack = vm::back,
-                onSave = { e, p -> vm.save(e, p) }, onSaveAs = vm::saveAs, onMove = { vm.move(doc.file) }, onSensitivePrompt = { sensitive = it })
+            else EditorScreen(doc, vm.busy, saving = vm.saving, onBack = vm::back,
+                onSave = { e, p -> vm.save(e, p) }, onSaveAs = { name, encrypted -> saveAsEncrypted = encrypted; exportPicker.launch(name) }, onMove = { vm.move(doc.file) }, onSensitivePrompt = { sensitive = it })
         }
+        saveAsUri?.let { uri -> PasswordDialog("Password for saved copy", confirm = true,
+            onDismiss = { saveAsUri = null; scope.launch { runCatching { android.provider.DocumentsContract.deleteDocument(contentResolver, uri) } } },
+            onSensitive = { sensitive = it }, onPassword = { saveAsUri = null; vm.saveAs(uri, it) }) }
         vm.unlockFile?.let { f -> PasswordDialog("Unlock ${f.name}", onDismiss = { vm.unlockFile = null }, onSensitive = { sensitive = it }, onPassword = vm::unlock) }
         backupUri?.let { uri -> PasswordDialog("Backup master password", confirm = true,
             onDismiss = { backupUri = null; scope.launch { runCatching { android.provider.DocumentsContract.deleteDocument(contentResolver, uri) } } },
             onSensitive = { sensitive = it }, onPassword = { backupUri = null; vm.backup(uri, it) }) }
         restoreUri?.let { uri ->
-            if (!restorePassword) AlertDialog(onDismissRequest = { restoreUri = null }, title = { Text("Restore offline backup") }, text = {
+            if (!restorePassword) AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { restoreUri = null }, title = { Text("Restore offline backup") }, text = {
                 Column {
                     Text("Choose how to handle matching filenames. The backup is verified before files are changed.")
                     ConflictPolicy.entries.forEach { policy ->
@@ -303,7 +326,7 @@ class MainActivity : FragmentActivity() {
             else PasswordDialog("Backup master password", onDismiss = { restorePassword = false; restoreUri = null }, onSensitive = { sensitive = it },
                 onPassword = { restorePassword = false; restoreUri = null; vm.restore(uri, it, conflict) })
         }
-        if (vm.pendingNavigation != null && !saveBeforeLeaving) AlertDialog(onDismissRequest = { vm.pendingNavigation = null }, title = { Text("Save your changes?") },
+        if (vm.pendingNavigation != null && !saveBeforeLeaving) AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { vm.pendingNavigation = null }, title = { Text("Save your changes?") },
             text = { Text("Your latest edits have not been saved.") },
             confirmButton = { TextButton(onClick = { if (vm.editor?.encrypted == true) saveBeforeLeaving = true else vm.save(false, null, true) }) { Text("Save") } },
             dismissButton = { Row {
@@ -312,9 +335,9 @@ class MainActivity : FragmentActivity() {
             } })
         if (saveBeforeLeaving) PasswordDialog("Password to save", onDismiss = { saveBeforeLeaving = false }, onSensitive = { sensitive = it },
             onPassword = { saveBeforeLeaving = false; vm.save(true, it, true) })
-        vm.notice?.let { notice -> AlertDialog(onDismissRequest = { vm.notice = null }, title = { Text("TXT") }, text = { Text(notice) },
+        vm.notice?.let { notice -> AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { vm.notice = null }, title = { Text("TXT") }, text = { Text(notice) },
             confirmButton = { TextButton(onClick = { vm.notice = null }) { Text("OK") } }) }
-        if (gateMessage != null && unlocked) AlertDialog(onDismissRequest = { gateMessage = null }, title = { Text("Android authentication") }, text = { Text(gateMessage.orEmpty()) },
+        if (gateMessage != null && unlocked) AlertDialog(modifier = Modifier.liquidGlass(), containerColor = androidx.compose.ui.graphics.Color.Transparent, onDismissRequest = { gateMessage = null }, title = { Text("Android authentication") }, text = { Text(gateMessage.orEmpty()) },
             confirmButton = { TextButton(onClick = { gateMessage = null }) { Text("OK") } })
     }
 }

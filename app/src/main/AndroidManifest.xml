@@ -27,6 +27,7 @@
                 <data android:mimeType="application/json" />
                 <data android:mimeType="application/xml" />
                 <data android:mimeType="application/javascript" />
+                <data android:mimeType="application/x-httpd-php" />
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
                 <data android:mimeType="application/octet-stream" />
             </intent-filter>
@@ -49,6 +50,7 @@
                 <data android:pathPattern=".*\\.xml" />
                 <data android:pathPattern=".*\\.csv" />
                 <data android:pathPattern=".*\\.html" />
+                <data android:pathPattern=".*\\.php" />
                 <data android:pathPattern=".*\\.css" />
                 <data android:pathPattern=".*\\.js" />
                 <data android:pathPattern=".*\\.kt" />
