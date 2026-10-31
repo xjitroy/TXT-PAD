@@ -1,7 +1,7 @@
 {
   "app_version": "1.1.0 (4)",
-  "source_commit": "42b77f089de23a2fc08036e12b556ec26aecb5df",
-  "source_input_hashes": "PASS: 31 compilation/test/resource/configuration inputs match this GitHub source tree",
+  "source_commit": "eab80f2f2bfefbf05092847754f8b83dbd285b7e",
+  "source_input_hashes": "PASS: 32 compilation/test/resource/configuration inputs match this GitHub source tree",
   "local_build": "PASS: JDK 17, Gradle 8.11.1, SDK 36; assembleRelease, bundleRelease, assembleDebugAndroidTest, testDebugUnitTest, lintRelease",
   "junit": [
     {
@@ -32,18 +32,18 @@
     "files": {
       "TXT.apk": {
         "bytes": 1962552,
-        "sha256": "a7b0f2b3b7742a1e06f436f751b32a8b7f29aa3cfe37d0d591f51c47db8930d6"
+        "sha256": "4861f2c7f71aed8110c81512611b82a0ae3767237527f4521df75d3c598b9200"
       },
       "TXT.aab": {
-        "bytes": 4066802,
-        "sha256": "691d51d7bcfcbadc10a57191637c7d5c16207772fc9435c9ab0f2d8886721442"
+        "bytes": 4066918,
+        "sha256": "185e9bc722bb11d9615befe4baa933d0f0630c363a3bd4f967aaf70c468b0f90"
       }
     }
   },
   "instrumented_tests": {
-    "status": "PENDING: expanded 28-case suite on API 26 and API 36",
-    "workflow_run": 41170550578,
-    "expected_cases_per_api": 28,
+    "status": "PENDING: final 30-case suite on API 26 and API 36",
+    "workflow_run": 41173332415,
+    "expected_cases_per_api": 30,
     "apis": [
       26,
       36
@@ -59,7 +59,7 @@
     ],
     "note": "Includes large-document and encrypted exit-protection regression cases"
   },
-  "signed_release_smoke": "PENDING: exact new signed APK, long-document stress, UTF-8 edits, password/vault/Trash and backup restore",
+  "signed_release_smoke": "PENDING: exact final signed APK, large documents, real SAF edits, passwords, vault, Trash and archive restore",
   "release_status": "PENDING: final password-change confirmation regression and signed APK checks",
   "external_incident": "https://stspg.io/5cd2m4n59spv",
   "private_signing_key": "Owner-only recovery kit outside repository; public certificate only is published",
@@ -67,8 +67,8 @@
   "talkback": "not tested",
   "security_audit": "not independently audited",
   "performance_120hz": "not measured",
-  "pending_password_confirmation": {
-    "expected_cases_per_api": 30,
-    "case": "A mismatched replacement password cannot trigger a save"
-  }
+  "security_regressions": [
+    "Encrypted exit protection through a committed safe frame",
+    "Mismatched replacement passwords cannot trigger a save"
+  ]
 }

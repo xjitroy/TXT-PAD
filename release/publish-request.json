@@ -1,48 +1,48 @@
 {
   "tag": "v1.1.0",
-  "source_commit": "42b77f089de23a2fc08036e12b556ec26aecb5df",
-  "verification_run": 41170550578,
+  "source_commit": "eab80f2f2bfefbf05092847754f8b83dbd285b7e",
+  "verification_run": 41173332415,
   "files": {
     "TXT.apk": {
-      "blob": "57bb875c411e709b5a61c5b0e281600eab3d71fa",
-      "sha256": "a7b0f2b3b7742a1e06f436f751b32a8b7f29aa3cfe37d0d591f51c47db8930d6",
+      "blob": "a66bb6f2f3d3efb2db5e6fcdfde0097717411d71",
+      "sha256": "4861f2c7f71aed8110c81512611b82a0ae3767237527f4521df75d3c598b9200",
       "bytes": 1962552
     },
     "TXT.aab": {
-      "blob": "6ccc3bd9175f0388c2e359a26c7d86fe766c1936",
-      "sha256": "691d51d7bcfcbadc10a57191637c7d5c16207772fc9435c9ab0f2d8886721442",
-      "bytes": 4066802
+      "blob": "40317d71fec80e21e4d83ca0044a074dd088eabd",
+      "sha256": "185e9bc722bb11d9615befe4baa933d0f0630c363a3bd4f967aaf70c468b0f90",
+      "bytes": 4066918
     },
     "SHA256SUMS": {
-      "blob": "64eacec208d9c4c472cf6482b84884f06e170d86",
-      "sha256": "3a3c2d6fc5d582938447ef33c58026b7d6f30c310ccb8fbbd6c349aee3d0fa13",
+      "blob": "259d210f80802ff7e01798602e6611ebc1032f88",
+      "sha256": "48e8d4a167b5529f693200d4d8823e9c8102944793810c5af89c36e681cf884f",
       "bytes": 148
     },
     "release-metadata.json": {
-      "blob": "9398b4ea5d5c590d623fd43fa5ae917cbdf4dba7",
-      "sha256": "d46499c69875a971422d1d6ea34819886d924412d16f44ec6281fb02f9dd745b",
+      "blob": "762aa4a950579811edf8fb1f18e18963b6d46aee",
+      "sha256": "f68d24dad3977264244e143ab1362f147869f8134d181604975896b7e5628a40",
       "bytes": 850
     },
     "TXT-source.zip": {
-      "blob": "039d27603b68a07649e41ce164fd110596772f20",
-      "sha256": "d5d691616a7e3a0d9cb243fd36df29c03cf1fc9128e736bcc9d6d55d23855d10",
-      "bytes": 2386689
+      "blob": "d93707eabc52809ba3d452c976f0240909b498ab",
+      "sha256": "122f60779e64c79d6a5c3ca26c25a7e4ef36904f77c11739ccdfe53d0d3f3d29",
+      "bytes": 2389377
     },
     "TXT-store-assets.zip": {
-      "blob": "3a2a68461d44dffb1fa53a865a61f5759e2e58a4",
-      "sha256": "9d61888c77c65ed1ab3f2a4eae65171233a8e1a7bd74a31a34def1af3b18d29d",
-      "bytes": 2205178
+      "blob": "fd93ff7b7c84379053ecbc0875b96a2493e377c8",
+      "sha256": "e2cd521e26ca6d42b18d100a8ebdccc10f1dfadac29e3c80418ab637efbee1a6",
+      "bytes": 2205292
     },
     "VERIFICATION.json": {
-      "blob": "60fb0793c1066f3af47544b8f2a51bc181555997",
-      "sha256": "c7cb34f5df2215e0873a61466cc8e3681435ea6b4a1ec4d6ea059a2f8b4ff554",
-      "bytes": 2568
+      "blob": "ce1a8884c3edc172dcb5f7821a7efa3ac35f4207",
+      "sha256": "b7a8a017e1148f957ea8fedabce48e6596b0907ae138edb0e64581a5b2750a1d",
+      "bytes": 2693
     },
     "mapping.txt.gz": {
-      "blob": "b1aef8b40769cf398a01f61dfa6cf0f8b394b3fd",
-      "sha256": "0a916b5843df1ab3c618e31b17201304f0967d10ceaeb61e5db0ab1a38040213",
-      "bytes": 2234524
+      "blob": "ce7de4d904e84bfeba19dd8d0a1a6aced2fed5c9",
+      "sha256": "ef217443b39886f3a9c55ec1365a14924134c356b331ef0a397570a17afae658",
+      "bytes": 2234277
     }
   },
-  "mapping_sha256": "c9889582dcc82b1cde11e65a190b4fe29b6eaa7a59b6e0b0d0dd39d3baed4a10"
+  "mapping_sha256": "6cd18b354e59ffb30bdba05639aab486abf4298d0797fd1ea088206e44478d36"
 }
