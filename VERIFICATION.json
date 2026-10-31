@@ -1,6 +1,6 @@
 {
   "app_version": "1.1.0 (4)",
-  "source_commit": "eab80f2f2bfefbf05092847754f8b83dbd285b7e",
+  "source_commit": "0c704e43bd68b588176975135dbce1b0883f1c50",
   "source_input_hashes": "PASS: 32 compilation/test/resource/configuration inputs match this GitHub source tree",
   "local_build": "PASS: JDK 17, Gradle 8.11.1, SDK 36; assembleRelease, bundleRelease, assembleDebugAndroidTest, testDebugUnitTest, lintRelease",
   "junit": [
@@ -32,36 +32,35 @@
     "files": {
       "TXT.apk": {
         "bytes": 1962552,
-        "sha256": "4861f2c7f71aed8110c81512611b82a0ae3767237527f4521df75d3c598b9200"
+        "sha256": "5b7dfbdcd2185408817389242c75cd9230da9b22e5f0e2114e1752d052f2ec05"
       },
       "TXT.aab": {
-        "bytes": 4066918,
-        "sha256": "185e9bc722bb11d9615befe4baa933d0f0630c363a3bd4f967aaf70c468b0f90"
+        "bytes": 4067165,
+        "sha256": "144b44f31968009b1eb242ad00c39fd6eef616e3b39c2f4bfa4be99d27ad1538"
       }
     }
   },
   "instrumented_tests": {
-    "status": "PASS: 30 cases on API 26 and 30 cases on API 36, no failures or skips",
-    "workflow_run": 41173332415,
-    "expected_cases_per_api": 30,
+    "status": "PENDING: exact source API 26 and API 36 run",
+    "workflow_run": 41177442974,
+    "expected_cases_per_api": 31,
     "apis": [
       26,
       36
     ]
   },
   "previous_green_emulator_suite": {
-    "source": "6d2f4a4ee7a56d8e6bfd756e1511f20b2ff9ae58",
-    "workflow_run": 41172478199,
-    "cases_per_api": 29,
+    "source": "eab80f2f2bfefbf05092847754f8b83dbd285b7e",
+    "workflow_run": 41173332415,
+    "cases_per_api": 30,
     "apis": [
       26,
       36
     ],
-    "note": "Includes large-document and encrypted exit-protection regression cases"
+    "note": "Includes large-document, encrypted exit protection and password confirmation regressions"
   },
-  "signed_release_smoke": "PENDING: exact final signed APK, large documents, real SAF edits, passwords, vault, Trash and archive restore",
-  "release_status": "PENDING: final password-change confirmation regression and signed APK checks",
-  "external_incident": "https://stspg.io/5cd2m4n59spv",
+  "signed_release_smoke": "PENDING: final signed APK with consumed-intent recreation fix",
+  "release_status": "PENDING: exact source and final signed APK checks",
   "private_signing_key": "Owner-only recovery kit outside repository; public certificate only is published",
   "physical_devices": "not tested",
   "talkback": "not tested",
@@ -69,10 +68,11 @@
   "performance_120hz": "not measured",
   "security_regressions": [
     "Encrypted exit protection through a committed safe frame",
-    "Mismatched replacement passwords cannot trigger a save"
+    "Mismatched replacement passwords cannot trigger a save",
+    "Consumed external URI is not replayed after system theme change or rotation"
   ],
   "signed_large_document_checks": {
-    "status": "PASS: both large-document steps completed before a later controller navigation error",
+    "status": "HISTORICAL PASS: predecessor APK completed both large-document steps before a later controller navigation error; current source repeats both instrumented cases",
     "workflow_run": 41173790062,
     "apk_sha256": "4861f2c7f71aed8110c81512611b82a0ae3767237527f4521df75d3c598b9200",
     "cases": [
