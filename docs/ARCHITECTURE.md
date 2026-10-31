@@ -8,6 +8,8 @@ list and one active `EditorDocument`. A document has a stable session UUID; savi
 URI/title must not recreate the text input. `busy` blocks I/O-sensitive operations; `saving`
 is separate so auto-save cannot make typing read-only. A pending navigation waits for all
 text revisions committed by the IME to be saved before closing.
+Activity recreation restores only an unhandled external URI. A consumed ACTION_VIEW/EDIT
+intent is not replayed when the system changes Light/Dark mode or rotates the screen.
 
 The app has no server, database or network permissions. Workspace URI permissions and small
 settings live in SharedPreferences. Device backup/transfer is disabled; explicit .tpbak is

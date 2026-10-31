@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.os.BundleCompat
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.AndroidViewModel
@@ -221,8 +222,14 @@ class MainActivity : FragmentActivity() {
         animateGlass = prefs.getBoolean("animated_glass", true)
         appLock = prefs.getBoolean("app_lock", false)
         unlocked = !appLock
-        incoming = externalUri(intent)
+        // Recreate only a still-pending request, never a consumed ACTION_VIEW intent.
+        incoming = if (savedInstanceState == null) externalUri(intent)
+        else BundleCompat.getParcelable(savedInstanceState, "txt.pending.uri", Uri::class.java)
         setContent { LiquidGlassTheme(animateBackdrop = animateGlass) { App() } }
+    }
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putParcelable("txt.pending.uri", incoming)
+        super.onSaveInstanceState(outState)
     }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); incoming = externalUri(intent) }
     private fun externalUri(intent: Intent?): Uri? = if (intent?.action == Intent.ACTION_VIEW || intent?.action == Intent.ACTION_EDIT) intent?.data else null

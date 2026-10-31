@@ -1,5 +1,6 @@
 package com.secure.textpad
 
+import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.view.WindowManager
@@ -11,11 +12,33 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import com.secure.textpad.data.PadFile
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 
 class SecureNavigationTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+
+    @Test fun consumedExternalOpenIsNotReplayedAfterActivityRecreation() {
+        val model = ViewModelProvider(compose.activity)[PadViewModel::class.java]
+        compose.waitUntil(15000) { !model.busy }
+        compose.runOnIdle {
+            compose.activity.startActivity(Intent(Intent.ACTION_VIEW,
+                Uri.parse("content://com.secure.textpad.qa.missing/file.txt"),
+                compose.activity, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP))
+        }
+        compose.waitUntil(15000) { model.notice != null }
+        compose.onNodeWithText("OK").performClick()
+        compose.runOnIdle { assertNull(model.notice) }
+        compose.activityRule.scenario.recreate()
+        compose.waitForIdle()
+        // Let the asynchronous URI router finish if recreation wrongly replays it.
+        Thread.sleep(1000)
+        compose.runOnIdle {
+            assertNull("A consumed external intent must not be opened again", model.notice)
+            assertNull(model.editor)
+        }
+    }
 
     @Test fun screenshotProtectionCoversTheEntireEncryptedExitAnimation() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
