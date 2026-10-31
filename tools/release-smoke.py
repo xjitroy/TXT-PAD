@@ -37,9 +37,21 @@ def collect_crash_log():
 atexit.register(collect_crash_log)
 
 def tree():
-    adb('shell', 'uiautomator', 'dump', '/sdcard/txt-ui.xml')
-    xml = adb('exec-out', 'cat', '/sdcard/txt-ui.xml')
-    return ET.fromstring(xml[xml.index('<?xml'):])
+    deadline=time.monotonic()+20
+    while time.monotonic()<deadline:
+        # A failed dump can leave an old file behind while an IME/window is moving.
+        adb('shell','rm','-f','/sdcard/txt-ui.xml')
+        response=adb('shell','uiautomator','dump','/sdcard/txt-ui.xml')
+        if 'dumped to:' in response:
+            xml=adb('exec-out','cat','/sdcard/txt-ui.xml')
+            start=xml.find('<?xml')
+            if start>=0:
+                try:
+                    return ET.fromstring(xml[start:])
+                except ET.ParseError:
+                    pass
+        time.sleep(.3)
+    raise AssertionError('UIAutomator did not provide a fresh window hierarchy')
 
 def bounds(node):
     return tuple(map(int, re.findall(r'\d+', node.attrib['bounds'])))
