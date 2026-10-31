@@ -14,6 +14,7 @@ for f in root.rglob('*'):
  if not f.is_file() or any(part in ignore for part in f.relative_to(root).parts) or f.is_relative_to(out):continue
  assert f.suffix not in private_suffixes and not f.name.startswith('TXT-private') and 'keystore-password' not in f.name,f'Private signing file found: {f.name}'
  if f.name=='local.properties' or f.suffix=='.pyc': continue
+ if f.relative_to(root).as_posix() in {'release/publish-request.json','release/verify-request.json'}: continue
  assert not f.name.startswith('.env'),f'Environment credentials found: {f.name}'
  assert (b'PRIVATE'+b' KEY-----') not in f.read_bytes(),f'Private key content found: {f.name}'
  files.append(f)

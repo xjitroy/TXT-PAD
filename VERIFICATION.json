@@ -1,7 +1,7 @@
 {
   "app_version": "1.1.0 (4)",
-  "source_commit": "9867349e576165969fe71b7fa15176ee4bac593c",
-  "source_input_hashes": "PASS: 29 compilation/test/resource/configuration inputs match this GitHub source tree",
+  "source_commit": "42b77f089de23a2fc08036e12b556ec26aecb5df",
+  "source_input_hashes": "PASS: 31 compilation/test/resource/configuration inputs match this GitHub source tree",
   "local_build": "PASS: JDK 17, Gradle 8.11.1, SDK 36; assembleRelease, bundleRelease, assembleDebugAndroidTest, testDebugUnitTest, lintRelease",
   "junit": [
     {
@@ -32,46 +32,39 @@
     "files": {
       "TXT.apk": {
         "bytes": 1962552,
-        "sha256": "479618b8543ff33d185f4e1f4a540a1e2184f1de6182d73e6d8b38017cd211cf"
+        "sha256": "a7b0f2b3b7742a1e06f436f751b32a8b7f29aa3cfe37d0d591f51c47db8930d6"
       },
       "TXT.aab": {
-        "bytes": 4066395,
-        "sha256": "f36606ad5be80687abcdabc2a3db76d031274101f31335cb66fd6e399408b12f"
+        "bytes": 4066802,
+        "sha256": "691d51d7bcfcbadc10a57191637c7d5c16207772fc9435c9ab0f2d8886721442"
       }
     }
   },
   "instrumented_tests": {
-    "status": "PASS: 26 cases on API 26 and 26 cases on API 36; all jobs succeeded",
-    "workflow_run": 41106969032,
-    "expected_cases_per_api": 26,
+    "status": "PENDING: expanded 28-case suite on API 26 and API 36",
+    "workflow_run": 41170550578,
+    "expected_cases_per_api": 28,
     "apis": [
       26,
       36
     ]
   },
   "previous_green_emulator_suite": {
-    "source": "fbbea769b938617e39a64e985e857a0628f42b36",
-    "workflow_run": 41096654789,
-    "cases_per_api": 25,
+    "source": "9867349e576165969fe71b7fa15176ee4bac593c",
+    "workflow_run": 41106969032,
+    "cases_per_api": 26,
     "apis": [
       26,
       36
     ],
-    "note": "Historical baseline; final source is verified by workflow 41106969032"
+    "note": "Historical baseline before the bounded viewport and long-line changes"
   },
-  "signed_release_smoke": "PENDING: exact signed APK UI, file grants, passwords, vault, Trash and backup restore",
+  "signed_release_smoke": "PENDING: exact new signed APK, long-document stress, UTF-8 edits, password/vault/Trash and backup restore",
   "release_status": "PENDING: viewport gutter and bounded long-line changes require a new green source run and signed APK validation",
   "external_incident": "https://stspg.io/5cd2m4n59spv",
   "private_signing_key": "Owner-only recovery kit outside repository; public certificate only is published",
   "physical_devices": "not tested",
   "talkback": "not tested",
   "security_audit": "not independently audited",
-  "performance_120hz": "not measured",
-  "pending_editor_regression": {
-    "expected_cases_per_api": 28,
-    "cases": [
-      "12000-line gutter and final caret visibility",
-      "50000-character unwrapped code line, unchanged text and reachable final caret"
-    ]
-  }
+  "performance_120hz": "not measured"
 }

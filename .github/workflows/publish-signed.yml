@@ -10,7 +10,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,7 +34,7 @@ jobs:
           packages: platform-tools
       - run: sdkmanager 'build-tools;36.0.0'
         timeout-minutes: 5
-      - name: Retrieve signed public files and require successful source checks
+      - name: Retrieve signed public files for the exact source run
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -44,20 +44,10 @@ jobs:
           assert re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+',request['tag'])
           assert re.fullmatch(r'[0-9a-f]{40}',request['source_commit'])
           repo=os.environ['GITHUB_REPOSITORY']
-          deadline=time.monotonic()+5*60
-          while True:
-              run=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs/{int(request["verification_run"])}'],timeout=90))
-              assert run['head_sha']==request['source_commit'],'Source SHA does not match the verification run'
-              if run['status']=='completed':
-                  assert run['conclusion']=='success','Source checks failed; refusing to publish'
-                  break
-              jobs=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs/{int(request["verification_run"])}/jobs?filter=latest'],timeout=90))['jobs']
-              if len(jobs)==3 and {j['name'] for j in jobs}=={'verify (26)','verify (36)','candidate'} and all(j['status']=='completed' and j['conclusion']=='success' for j in jobs):
-                  print('Exact source: both emulator jobs and candidate completed successfully; run summary is delayed.',flush=True)
-                  break
-              assert time.monotonic()<deadline,'Source checks are still queued; rerun publication after GitHub recovers'
-              print('Waiting for the exact source verification run...',flush=True)
-              time.sleep(15)
+          run=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs/{int(request["verification_run"])}'],timeout=90))
+          assert run['head_sha']==request['source_commit'],'Source SHA does not match the verification run'
+          assert run['name']=='TXT checks','Expected the source regression workflow'
+          assert run['status']!='completed' or run['conclusion']=='success','Source checks failed'
           allowed={'TXT.apk','TXT.aab','SHA256SUMS','release-metadata.json','TXT-source.zip','TXT-store-assets.zip','VERIFICATION.json','mapping.txt.gz'}
           assert set(request['files'])==allowed
           subprocess.run(['git','diff','--exit-code',request['source_commit'],'HEAD','--','app/src','app/build.gradle.kts','build.gradle.kts','settings.gradle.kts','gradle.properties','gradle','gradlew','gradlew.bat'],check=True)
@@ -102,6 +92,30 @@ jobs:
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: python3 tools/release-smoke.py --apk dist/TXT.apk --out release-proof
+      - name: Require successful source checks before publication
+        timeout-minutes: 22
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PYGATE'
+          import json,os,pathlib,subprocess,time
+          request=json.loads(pathlib.Path('release/publish-request.json').read_text())
+          repo=os.environ['GITHUB_REPOSITORY']
+          deadline=time.monotonic()+20*60
+          while True:
+              run=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs/{int(request["verification_run"])}'],timeout=90))
+              assert run['head_sha']==request['source_commit'],'Source SHA does not match the verification run'
+              if run['status']=='completed':
+                  assert run['conclusion']=='success','Source checks failed; refusing to publish'
+                  break
+              jobs=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs/{int(request["verification_run"])}/jobs?filter=latest'],timeout=90))['jobs']
+              if len(jobs)==3 and {j['name'] for j in jobs}=={'verify (26)','verify (36)','candidate'} and all(j['status']=='completed' and j['conclusion']=='success' for j in jobs):
+                  print('Exact source: both emulator jobs and candidate completed successfully; run summary is delayed.',flush=True)
+                  break
+              assert time.monotonic()<deadline,'Source checks are still queued; rerun publication after GitHub recovers'
+              print('Waiting for the exact source verification run...',flush=True)
+              time.sleep(15)
+          PYGATE
       - name: Complete evidence packages and publish
         env:
           GH_TOKEN: ${{ github.token }}

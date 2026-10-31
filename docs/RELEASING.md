@@ -92,8 +92,9 @@ public-blob staging route. It sends only signed public artifacts, never the priv
    TXT checks run ID) and --tag. It creates release/publish-request.json. Never point it at
    a signing-kit directory. It refuses private-key suffixes and stages an explicit allowlist.
 4. Commit that manifest on main without [skip ci]. Verify and publish signed artifacts
-   downloads the public blobs, checks hashes and the pinned certificate, requires green
-   source checks, runs the actual minified APK and publishes only after success. No signing
+   downloads the public blobs, checks hashes and the pinned certificate, runs the actual minified APK and requires
+   green source checks before publication. Source and signed-build verification can run
+   concurrently; publication requires both to pass. No signing
    password/key is sent to the runner. Diagnostics remain in a draft when smoke fails.
 5. Review the real release proof, update the repository's VERIFICATION.json from the release
    result, and record the build in HANDOFF.md. Public blobs are staging objects; release
