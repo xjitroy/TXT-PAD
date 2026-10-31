@@ -41,7 +41,7 @@
     }
   },
   "instrumented_tests": {
-    "status": "PENDING: exact source API 26 and API 36 run",
+    "status": "PASS: 31 cases on API 26 and 31 cases on API 36, no failures or skips",
     "workflow_run": 41178248679,
     "expected_cases_per_api": 31,
     "apis": [

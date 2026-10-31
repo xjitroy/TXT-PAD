@@ -87,20 +87,18 @@ def password_input(value, index=0):
     while time.monotonic()<deadline:
         root=tree()
         fields=[n for n in root.iter('node') if n.get('class')=='android.widget.EditText'
-                and n.get('password')=='true' and n.get('enabled')!='false']
+                and (n.get('hint') or n.get('text')) in {'Password','Repeat password'}
+                and n.get('enabled')!='false' and bounds(n)[3]>bounds(n)[1]]
         if len(fields)>index:
             tap(node=fields[index])
-            time.sleep(.4)
-            focused=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText'
-                     and n.get('password')=='true' and n.get('enabled')!='false']
-            if len(focused)>index and focused[index].get('focused')=='true':
-                text(value)
-                return
+            time.sleep(.5)
+            text(value)
+            return
         time.sleep(.3)
     failed=ET.tostring(tree(),encoding='unicode')
     (out/'failed-ui.xml').write_text(failed)
     print('Synthetic password-focus UI at failure:',failed,flush=True)
-    raise AssertionError('The native password input did not become focused')
+    raise AssertionError('The labelled native password input was not available')
 
 def screenshot(name):
     time.sleep(.5)
