@@ -347,7 +347,7 @@ fun EditorScreen(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), style = MaterialTheme.typography.labelSmall,
             maxLines = if (imeBottom > 0) 1 else 2, overflow = TextOverflow.Ellipsis)
     }
-    if (password) PasswordDialog(title = if (doc.encrypted) "Password to save" else "Lock this document", confirm = !doc.encrypted,
+    if (password) PasswordDialog(title = if (doc.encrypted) "Change document password" else "Lock this document", confirm = true,
         onDismiss = { password = false }, onSensitive = onSensitivePrompt,
         onPassword = { password = false; onSave(true, it) })
     if (tools) ModalBottomSheet(sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Color.Transparent, onDismissRequest = { tools = false }) {

@@ -312,6 +312,39 @@ class ThemeAndFileActionsTest {
         compose.onNodeWithText("Choose location").performClick()
         compose.runOnIdle { assertEquals("index.php", requestedName) }
     }
+    @Test fun changingAnEncryptedPasswordRequiresMatchingConfirmation() {
+        val document = EditorDocument(sample, "Already unlocked content", true)
+        var saved = false
+        compose.setContent {
+            LiquidGlassTheme(animateBackdrop = false) {
+                EditorScreen(document, false, onBack = {}, onSave = { _, password ->
+                    password?.fill('\u0000'); saved = true
+                }, onMove = {}, onSaveAs = { _, _ -> }, onSensitivePrompt = {})
+            }
+        }
+        compose.onNodeWithText("Lock").performClick()
+        compose.onNodeWithText("Change document password").assertIsDisplayed()
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        fun inputs(node: android.view.accessibility.AccessibilityNodeInfo?): List<android.view.accessibility.AccessibilityNodeInfo> =
+            if (node == null) emptyList() else buildList {
+                if (node.className?.toString() == "android.widget.EditText") add(node)
+                for (index in 0 until node.childCount) addAll(inputs(node.getChild(index)))
+            }
+        compose.waitUntil(10000) { inputs(automation.rootInActiveWindow).size == 2 }
+        fun enter(index: Int) {
+            val value = android.os.Bundle().apply {
+                putCharSequence(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "replacement long password")
+            }
+            assertTrue(inputs(automation.rootInActiveWindow)[index].performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_TEXT, value))
+        }
+        enter(0)
+        compose.onNodeWithText("Continue").performScrollTo().performClick()
+        compose.onNodeWithText("Passwords do not match.").assertIsDisplayed()
+        compose.runOnIdle { assertFalse(saved) }
+        enter(1)
+        compose.onNodeWithText("Continue").performScrollTo().performClick()
+        compose.runOnIdle { assertTrue(saved) }
+    }
     @Test fun sessionPasswordIsSealedAndConsumedWithoutPersistingPlaintext() {
         val password = "session-only password".toCharArray()
         val sealed = SessionPassword.seal(password)

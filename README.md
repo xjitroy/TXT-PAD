@@ -62,7 +62,8 @@ Read-only external files can be exported to another location using Save As.
 Settings → Fingerprint / screen lock is **off by default**. Enabling/disabling requires
 hardware-backed AndroidKeyStore authentication. Android 11+ supports device credential
 fallback; Android 8–10 requires a strong enrolled biometric. App lock gates TXT on return
-from the background. File encryption still needs the file password; biometrics do not
+from the background. Changing an open document’s password requires a matching repeat entry.
+File encryption still needs the file password; biometrics do not
 recover a forgotten password or unlock backups on a different device. Password fields
 support Android Autofill. An installed third-party Autofill provider may have its own
 network behavior outside TXT's process.

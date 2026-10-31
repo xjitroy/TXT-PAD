@@ -8,6 +8,7 @@ TXT 1.1.0 — clearer writing, responsive glass and stable releases
 - Auto-save defaults on; Undo/Redo reveals changed text and survives saving. Custom filenames/extensions remain available in Tools → Save As.
 - Long-document line numbers render only in the visible viewport. Extremely long unwrapped lines continue at a bounded display width without changing saved text. New 12,000-line and 50,000-character-line regression cases cover caret visibility.
 - Screenshot protection follows both sides of editor navigation and stays active until a safe frame after an encrypted page has left.
+- Changing an encrypted document password now requires a strong matching confirmation, preventing accidental re-keying after a mistyped single entry.
 - SDK target 36, min Android 8. Minified release APK and AAB use a stable production certificate. Source, build workflows, privacy/listing assets, mapping, checksums and maintainer handoff are public; private signing material is delivered separately to the owner.
 
 Back up private files before uninstalling an old debug preview: its signing key differs. Uninstalling erases the private vault and Trash. DOCX support keeps paragraph text, not formatting or images. Physical-device and Play Console policy/review checks remain necessary; no independent security audit or 120 Hz hardware certification is claimed.
