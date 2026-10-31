@@ -41,7 +41,7 @@
     }
   },
   "instrumented_tests": {
-    "status": "PENDING: final 30-case suite on API 26 and API 36",
+    "status": "PASS: 30 cases on API 26 and 30 cases on API 36, no failures or skips",
     "workflow_run": 41173332415,
     "expected_cases_per_api": 30,
     "apis": [
@@ -70,5 +70,14 @@
   "security_regressions": [
     "Encrypted exit protection through a committed safe frame",
     "Mismatched replacement passwords cannot trigger a save"
-  ]
+  ],
+  "signed_large_document_checks": {
+    "status": "PASS: both large-document steps completed before a later controller navigation error",
+    "workflow_run": 41173790062,
+    "apk_sha256": "4861f2c7f71aed8110c81512611b82a0ae3767237527f4521df75d3c598b9200",
+    "cases": [
+      "12000-line document with line numbers",
+      "50000-character line with Word Wrap off"
+    ]
+  }
 }

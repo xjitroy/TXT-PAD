@@ -68,6 +68,7 @@ python3 tools/release-smoke.py --apk dist/TXT.apk --out release-proof
 ```
 
 The script aligns/signs the APK and JAR-signs the AAB without password command-line arguments.
+Add `--stress` when changing text layout to include the long-document cases in the signed APK.
 Run on an empty test emulator, not a phone holding real vault data. Publish only after checks
 pass. A separate `Verify public signed APK` workflow can validate an already uploaded release.
 

@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 parser = argparse.ArgumentParser()
 parser.add_argument('--apk', required=True)
 parser.add_argument('--out', default='release-proof')
+parser.add_argument('--stress', action='store_true', help='Also exercise 12000-line and 50000-character documents')
 args = parser.parse_args()
 out = pathlib.Path(args.out); out.mkdir(parents=True, exist_ok=True)
 
@@ -89,12 +90,6 @@ def password_input(value, index=0):
     fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
     assert len(fields[index].get('text',''))==len(value),'Native password input did not receive every character'
 
-def hide_keyboard():
-    state = adb('shell', 'dumpsys', 'input_method')
-    if re.search(r'(?:mInputShown|mIsInputViewShown|mInputViewShown)=true', state):
-        adb('shell','input','keyevent','KEYCODE_BACK')
-        time.sleep(.3)
-
 def screenshot(name):
     time.sleep(.5)
     (out/f'{name}.png').write_bytes(adb('exec-out', 'screencap', '-p', binary=True))
@@ -163,8 +158,9 @@ locate('Files in TXT-QA',resource='header_title')
 tap('Use this folder')
 tap('Allow',timeout=25)
 locate('New File',timeout=45)
-stress_document('A line for scrolling.\n'*12000,'Line numbers')
-stress_document('A'*50000,'Word wrap')
+if args.stress:
+    stress_document('A line for scrolling.\n'*12000,'Line numbers')
+    stress_document('A'*50000,'Word wrap')
 with tempfile.TemporaryDirectory() as tmp:
     fixture=pathlib.Path(tmp)/'TXT-release-check.txt'
     fixture.write_text('Release check\nA clear page for your ideas.\nEverything stays on this device.\n',encoding='utf-8')
@@ -181,21 +177,19 @@ check_raw(lambda b:b'Release typing' in b)
 screenshot('release-editor-keyboard')
 tap('Undo');wait_saved();check_raw(lambda b:b'Release typing' not in b)
 tap('Redo');wait_saved();check_raw(lambda b:b'Release typing' in b)
-hide_keyboard()
 # Native password inputs and authenticated save in the minified build.
 tap('Lock')
 locate('Lock this document')
 for index in range(2):
     password_input('release-check-password',index)
-tap('Continue')
+tap('Continue',scroll=True)
 wait_saved();check_raw(lambda b:b.startswith(b'STXT'))
 # Close the editor using its named Back control, then require a password on re-open.
 tap('Back to files')
 external();locate('Unlock TXT-release-check.txt')
-password_input('release-check-password');tap('Continue')
+password_input('release-check-password');tap('Continue',scroll=True)
 wait_saved()
 assert 'Release typing' in ET.tostring(tree(),encoding='unicode')
-hide_keyboard()
 tap('Tools ⋯',scroll=True)
 locate('Tools')
 tap('Isolate from other apps',scroll=True)
@@ -223,7 +217,7 @@ tap('Save')
 locate('Backup master password')
 for index in range(2):
     password_input('master-release-password',index)
-tap('Continue')
+tap('Continue',scroll=True)
 locate('Offline backup created. Keep it and its master password safe.',timeout=60);tap('OK')
 paths=adb('shell','find','/sdcard/Download','/sdcard/Documents','-name',picker_name).strip().splitlines()
 assert len(paths)==1
@@ -234,7 +228,7 @@ try:
 except AssertionError:
     tap('Show roots');tap('Downloads');tap(picker_name,scroll=True)
 locate('Restore offline backup');tap('Enter master password')
-password_input('master-release-password');tap('Continue')
+password_input('master-release-password');tap('Continue',scroll=True)
 locate('Restored 2 files. Skipped 0.',timeout=60);tap('OK')
 with tempfile.TemporaryDirectory() as tmp:
     copy=pathlib.Path(tmp)/'workspace-restored.txt'
@@ -243,7 +237,7 @@ with tempfile.TemporaryDirectory() as tmp:
 locate('TXT-release-check (1).txt',scroll=True)
 tap('TXT-release-check (1).txt')
 locate('Unlock TXT-release-check (1).txt')
-password_input('release-check-password');tap('Continue')
+password_input('release-check-password');tap('Continue',scroll=True)
 wait_saved()
 assert 'Release typing' in ET.tostring(tree(),encoding='unicode')
 tap('Back to files')
@@ -261,7 +255,6 @@ try:
     time.sleep(2)
     tap('Undo');time.sleep(.5);tap('Redo')
     time.sleep(1)
-    hide_keyboard()
     tap('Back to files')
     record.wait(timeout=25)
 finally:

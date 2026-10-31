@@ -169,7 +169,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p release-proof
-          timeout 15s adb logcat -d -b crash > release-proof/crash-log.txt || true
+          if timeout 3s adb get-state > /dev/null 2>&1; then timeout 10s adb logcat -d -b crash > release-proof/crash-log.txt || true; fi
           tar -czf TXT-release-diagnostics.tar.gz release-proof
           TXT_TAG=$(python3 -c 'import json; print(json.load(open("release/publish-request.json"))["tag"])')
           gh release upload "$TXT_TAG" TXT-release-diagnostics.tar.gz --clobber || true
