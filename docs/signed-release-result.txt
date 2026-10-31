@@ -1,0 +1,1 @@
+PASS: signed minified APK install, persisted SAF workspace selection, tree URI routing, UTF-8 auto-save, Undo/Redo disk results, STXT encryption, password re-open, private move, encrypted Trash/Restore, encrypted archive export and Keep Both restore of workspace and vault through system pickers, system light/dark and real interaction recording.

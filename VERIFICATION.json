@@ -41,7 +41,7 @@
     }
   },
   "instrumented_tests": {
-    "status": "PASS: 31 cases on API 26 and 31 cases on API 36, no failures or skips",
+    "status": "PASS: exact source workflow succeeded on API 26 and 36",
     "workflow_run": 41178248679,
     "expected_cases_per_api": 31,
     "apis": [
@@ -59,8 +59,8 @@
     ],
     "note": "Includes large-document, encrypted exit protection and password confirmation regressions"
   },
-  "signed_release_smoke": "PENDING: final signed APK with consumed-intent recreation fix",
-  "release_status": "PENDING: exact source and final signed APK checks",
+  "signed_release_smoke": "PASS: real signed minified APK UI/storage/encryption/archive flows",
+  "release_status": "PASS: verified signed APK and AAB published as the stable release",
   "private_signing_key": "Owner-only recovery kit outside repository; public certificate only is published",
   "physical_devices": "not tested",
   "talkback": "not tested",
@@ -79,5 +79,7 @@
       "12000-line document with line numbers",
       "50000-character line with Word Wrap off"
     ]
-  }
+  },
+  "signed_release_workflow": 41190693553,
+  "signed_release_result": "PASS: signed minified APK install, persisted SAF workspace selection, tree URI routing, UTF-8 auto-save, Undo/Redo disk results, STXT encryption, password re-open, private move, encrypted Trash/Restore, encrypted archive export and Keep Both restore of workspace and vault through system pickers, system light/dark and real interaction recording."
 }

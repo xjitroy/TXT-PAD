@@ -1,7 +1,13 @@
 # TXT 1.1.0 release status
 
-The viewport and encrypted-exit protection passed 29 tests each on API 26 and API 36 (58 total), source 6d2f4a4ee7a56d8e6bfd756e1511f20b2ff9ae58, run 41172478199.
+PASS: source checks, local build, signatures, permissions, alignment and actual signed APK smoke.
 
-Password-change confirmation and consumed external-intent recreation are included in the final regression suite (31 cases per API). Signed APK validation and stable publication remain gated on the exact source checks.
+Source: `ee384d51bb2580d8294fef4d45e403c5ebf0ebf8`
 
-The production signing identity is unchanged; the private recovery kit stays outside GitHub.
+Source checks: https://github.com/xjitroy/TXT-PAD/actions/runs/41178248679
+
+Signed APK proof: https://github.com/xjitroy/TXT-PAD/actions/runs/41190693553
+
+PASS: signed minified APK install, persisted SAF workspace selection, tree URI routing, UTF-8 auto-save, Undo/Redo disk results, STXT encryption, password re-open, private move, encrypted Trash/Restore, encrypted archive export and Keep Both restore of workspace and vault through system pickers, system light/dark and real interaction recording.
+
+Physical devices, TalkBack, 120 Hz and independent security audit remain unverified.
