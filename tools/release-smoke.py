@@ -158,6 +158,7 @@ locate('Files in TXT-QA',resource='header_title')
 tap('Use this folder')
 tap('Allow',timeout=25)
 locate('New File',timeout=45)
+print('Native checkpoint: persisted workspace selected',flush=True)
 if args.stress:
     stress_document('A line for scrolling.\n'*12000,'Line numbers')
     stress_document('A'*50000,'Word wrap')
@@ -190,6 +191,7 @@ external();locate('Unlock TXT-release-check.txt')
 password_input('release-check-password');tap('Continue',scroll=True)
 wait_saved()
 assert 'Release typing' in ET.tostring(tree(),encoding='unicode')
+print('Native checkpoint: plain save, Undo/Redo, STXT save and password reopen passed',flush=True)
 tap('Tools ⋯',scroll=True)
 locate('Tools')
 tap('Isolate from other apps',scroll=True)
@@ -200,12 +202,14 @@ screenshot('release-home-dark')
 # Preserve encrypted bytes through the real Trash and Restore controls.
 tap('File options: TXT-release-check.txt',scroll=True)
 tap('Move to Trash',scroll=True);tap('Move to Trash')
+locate('Moved to Trash. You can restore it later.');tap('OK')
 tap('Trash')
 locate('TXT-release-check.txt');tap('Restore')
 locate('Restored TXT-release-check.txt.');tap('OK')
 tap('‹ Back to documents')
 locate('TXT-release-check.txt')
 # Exercise the minified ZIP/JSON backup path through Android's destination picker.
+print('Native checkpoint: private move and encrypted Trash/Restore passed',flush=True)
 # A separate plain workspace file verifies both placement flags in a full backup.
 fixture=out/'workspace-check.txt';fixture.write_text('Workspace restore check',encoding='utf-8')
 adb('push',str(fixture),'/sdcard/Documents/TXT-QA/workspace-check.txt')
@@ -222,6 +226,7 @@ locate('Offline backup created. Keep it and its master password safe.',timeout=6
 paths=adb('shell','find','/sdcard/Download','/sdcard/Documents','-name',picker_name).strip().splitlines()
 assert len(paths)==1
 assert adb('exec-out','cat',paths[0],binary=True).startswith(b'TPBK')
+print('Native checkpoint: encrypted full backup export passed',flush=True)
 tap('Backup');tap('Restore offline backup')
 try:
     tap(picker_name,timeout=8,scroll=True)
