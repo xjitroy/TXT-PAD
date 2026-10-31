@@ -83,12 +83,24 @@ def text(value):
     time.sleep(.2)
 
 def password_input(value, index=0):
-    fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
-    tap(node=fields[index])
-    time.sleep(.7)
-    fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
-    assert fields[index].get('focused')=='true','Native password field did not receive focus'
-    text(value)
+    deadline=time.monotonic()+25
+    while time.monotonic()<deadline:
+        root=tree()
+        fields=[n for n in root.iter('node') if n.get('class')=='android.widget.EditText'
+                and n.get('password')=='true' and n.get('enabled')!='false']
+        if len(fields)>index:
+            tap(node=fields[index])
+            time.sleep(.4)
+            focused=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText'
+                     and n.get('password')=='true' and n.get('enabled')!='false']
+            if len(focused)>index and focused[index].get('focused')=='true':
+                text(value)
+                return
+        time.sleep(.3)
+    failed=ET.tostring(tree(),encoding='unicode')
+    (out/'failed-ui.xml').write_text(failed)
+    print('Synthetic password-focus UI at failure:',failed,flush=True)
+    raise AssertionError('The native password input did not become focused')
 
 def screenshot(name):
     time.sleep(.5)
@@ -142,6 +154,7 @@ adb('logcat','-c')
 adb('install','-r',args.input_helper)
 adb('install','-r',args.apk)
 adb('shell','settings','put','secure','show_ime_with_hard_keyboard','1')
+adb('shell','settings','put','secure','autofill_service','null')
 adb('shell','cmd','uimode','night','yes')
 adb('shell','am','start','-W','-n','com.secure.textpad/.MainActivity')
 locate('Choose workspace folder',timeout=45)
