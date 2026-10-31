@@ -1,7 +1,7 @@
 {
   "tag": "v1.1.0",
-  "source_commit": "0c704e43bd68b588176975135dbce1b0883f1c50",
-  "verification_run": 41177442974,
+  "source_commit": "ee384d51bb2580d8294fef4d45e403c5ebf0ebf8",
+  "verification_run": 41178248679,
   "files": {
     "TXT.apk": {
       "blob": "fbb7faeefa00bed6652693090af4dfbb1ac2bb15",
@@ -24,9 +24,9 @@
       "bytes": 850
     },
     "TXT-source.zip": {
-      "blob": "30c47be9b3b529ceb2f2d6086a5661bfb58e1c97",
-      "sha256": "691021e3f5078ab5825baf89adb831804327c87a60c9de6e9dd65c1bb9ba4268",
-      "bytes": 2393212
+      "blob": "6a5396e407ee0ff2aa2108b24d11b0dc1209c0b9",
+      "sha256": "add689117b07a9be6707d10c109295e952c11f024c31356c568a26fbefa65de2",
+      "bytes": 2393276
     },
     "TXT-store-assets.zip": {
       "blob": "5700a6db6206ce963290a25604c91be3a93e9551",
@@ -34,8 +34,8 @@
       "bytes": 2205518
     },
     "VERIFICATION.json": {
-      "blob": "405c92f5e1855396e7c282ca9d314afa91ccba38",
-      "sha256": "e8cab514d954a23885bdad8dab0b83ee3dd8bbb4fc6be3dacf08c0a7bf88472b",
+      "blob": "911da560f88835872dc48a785f41100071f5a746",
+      "sha256": "711321a9198ec8f2e6b603d438e1751fa1aca86e28eace9e5f61db8b1c05dae6",
       "bytes": 3110
     },
     "mapping.txt.gz": {

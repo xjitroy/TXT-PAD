@@ -1,6 +1,6 @@
 {
   "app_version": "1.1.0 (4)",
-  "source_commit": "0c704e43bd68b588176975135dbce1b0883f1c50",
+  "source_commit": "ee384d51bb2580d8294fef4d45e403c5ebf0ebf8",
   "source_input_hashes": "PASS: 32 compilation/test/resource/configuration inputs match this GitHub source tree",
   "local_build": "PASS: JDK 17, Gradle 8.11.1, SDK 36; assembleRelease, bundleRelease, assembleDebugAndroidTest, testDebugUnitTest, lintRelease",
   "junit": [
@@ -42,7 +42,7 @@
   },
   "instrumented_tests": {
     "status": "PENDING: exact source API 26 and API 36 run",
-    "workflow_run": 41177442974,
+    "workflow_run": 41178248679,
     "expected_cases_per_api": 31,
     "apis": [
       26,
