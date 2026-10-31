@@ -71,7 +71,8 @@ python3 tools/release-smoke.py --apk dist/TXT.apk --out release-proof --input-he
 The script aligns/signs the APK and JAR-signs the AAB without password command-line arguments.
 The separate QA helper uses no network permission or TXT signing key. Its clipboard receiver
 requires Android DUMP permission, so only the test shell/system can call it. It sends synthetic
-fixture input atomically, as a password-manager paste would. Never run it on real vault data.
+editor input atomically. Shell-launched UiAutomation sets native password fields by hint and
+activates their Continue action; encrypted-save/unlock round trips verify acceptance. Never run it on real vault data.
 
 Add `--stress` when changing text layout to include the long-document cases in the signed APK.
 Run on an empty test emulator, not a phone holding real vault data. Publish only after checks

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Drive the real, minified signed APK. All taps come from UI XML bounds."""
+"""Drive the real signed APK through UI bounds and native accessibility actions."""
 import argparse
 import atexit
 import pathlib
@@ -83,22 +83,16 @@ def text(value):
     time.sleep(.2)
 
 def password_input(value, index=0):
-    deadline=time.monotonic()+25
-    while time.monotonic()<deadline:
-        root=tree()
-        fields=[n for n in root.iter('node') if n.get('class')=='android.widget.EditText'
-                and (n.get('hint') or n.get('text')) in {'Password','Repeat password'}
-                and n.get('enabled')!='false' and bounds(n)[3]>bounds(n)[1]]
-        if len(fields)>index:
-            tap(node=fields[index])
-            time.sleep(.5)
-            text(value)
-            return
-        time.sleep(.3)
-    failed=ET.tostring(tree(),encoding='unicode')
-    (out/'failed-ui.xml').write_text(failed)
-    print('Synthetic password-focus UI at failure:',failed,flush=True)
-    raise AssertionError('The labelled native password input was not available')
+    assert index in (0,1)
+    label='Password' if index==0 else 'Repeat password'
+    result=adb('shell','am','instrument','-w','-e','mode','input','-e','label',label.replace(' ','\\ '),
+               '-e','value',value,'com.secure.textpad.qa.input/.UiInput')
+    assert 'INSTRUMENTATION_CODE: -1' in result,result
+
+def submit_password():
+    result=adb('shell','am','instrument','-w','-e','mode','click','-e','label','Continue',
+               'com.secure.textpad.qa.input/.UiInput')
+    assert 'INSTRUMENTATION_CODE: -1' in result,result
 
 def screenshot(name):
     time.sleep(.5)
@@ -195,12 +189,12 @@ tap('Lock')
 locate('Lock this document')
 for index in range(2):
     password_input('release-check-password',index)
-tap('Continue',scroll=True)
+submit_password()
 wait_saved();check_raw(lambda b:b.startswith(b'STXT'))
 # Close the editor using its named Back control, then require a password on re-open.
 tap('Back to files')
 external();locate('Unlock TXT-release-check.txt')
-password_input('release-check-password');tap('Continue',scroll=True)
+password_input('release-check-password');submit_password()
 wait_saved()
 assert 'Release typing' in ET.tostring(tree(),encoding='unicode')
 print('Native checkpoint: plain save, Undo/Redo, STXT save and password reopen passed',flush=True)
@@ -233,7 +227,7 @@ tap('Save')
 locate('Backup master password')
 for index in range(2):
     password_input('master-release-password',index)
-tap('Continue',scroll=True)
+submit_password()
 locate('Offline backup created. Keep it and its master password safe.',timeout=60);tap('OK')
 paths=adb('shell','find','/sdcard/Download','/sdcard/Documents','-name',picker_name).strip().splitlines()
 assert len(paths)==1
@@ -245,7 +239,7 @@ try:
 except AssertionError:
     tap('Show roots');tap('Downloads');tap(picker_name,scroll=True)
 locate('Restore offline backup');tap('Enter master password')
-password_input('master-release-password');tap('Continue',scroll=True)
+password_input('master-release-password');submit_password()
 locate('Restored 2 files. Skipped 0.',timeout=60);tap('OK')
 with tempfile.TemporaryDirectory() as tmp:
     copy=pathlib.Path(tmp)/'workspace-restored.txt'
@@ -254,7 +248,7 @@ with tempfile.TemporaryDirectory() as tmp:
 locate('TXT-release-check (1).txt',scroll=True)
 tap('TXT-release-check (1).txt')
 locate('Unlock TXT-release-check (1).txt')
-password_input('release-check-password');tap('Continue',scroll=True)
+password_input('release-check-password');submit_password()
 wait_saved()
 assert 'Release typing' in ET.tostring(tree(),encoding='unicode')
 print('Native checkpoint: archive restore, restored bytes and inner password unlock passed',flush=True)

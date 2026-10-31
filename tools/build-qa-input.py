@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a separate, test-only clipboard receiver; never uses the TXT signing key."""
+"""Build a separate, test-only input helper; never uses the TXT signing key."""
 import argparse
 import os
 import pathlib
@@ -17,7 +17,7 @@ android=sdk/'platforms/android-36/android.jar';build=sdk/'build-tools/36.0.0'
 assert android.is_file() and (build/'d8').is_file(),'Install SDK platform and build-tools 36 first'
 classes=out/'classes';classes.mkdir(exist_ok=True);dex=out/'dex';dex.mkdir(exist_ok=True)
 def run(*command):subprocess.run([str(c) for c in command],check=True,stdout=subprocess.DEVNULL,timeout=90)
-run('javac','-source','8','-target','8','-classpath',android,'-d',classes,root/'ClipboardInput.java')
+run('javac','-source','8','-target','8','-classpath',android,'-d',classes,*sorted(root.glob('*.java')))
 run(build/'d8','--lib',android,'--min-api','26','--output',dex,*classes.rglob('*.class'))
 unsigned=out/'unsigned.apk'
 run(build/'aapt2','link','-o',unsigned,'--manifest',root/'AndroidManifest.xml','-I',android,'--min-sdk-version','26','--target-sdk-version','36')
