@@ -6,10 +6,13 @@ import android.provider.Settings
 import android.view.WindowManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import com.secure.textpad.data.PadFile
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
@@ -18,27 +21,6 @@ import org.junit.Test
 
 class SecureNavigationTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
-
-    @Test fun consumedExternalOpenIsNotReplayedAfterActivityRecreation() {
-        val model = ViewModelProvider(compose.activity)[PadViewModel::class.java]
-        compose.waitUntil(15000) { !model.busy }
-        compose.runOnIdle {
-            compose.activity.startActivity(Intent(Intent.ACTION_VIEW,
-                Uri.parse("content://com.secure.textpad.qa.missing/file.txt"),
-                compose.activity, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP))
-        }
-        compose.waitUntil(15000) { model.notice != null }
-        compose.onNodeWithText("OK").performClick()
-        compose.runOnIdle { assertNull(model.notice) }
-        compose.activityRule.scenario.recreate()
-        compose.waitForIdle()
-        // Let the asynchronous URI router finish if recreation wrongly replays it.
-        Thread.sleep(1000)
-        compose.runOnIdle {
-            assertNull("A consumed external intent must not be opened again", model.notice)
-            assertNull(model.editor)
-        }
-    }
 
     @Test fun screenshotProtectionCoversTheEntireEncryptedExitAnimation() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -76,6 +58,31 @@ class SecureNavigationTest {
         } finally {
             compose.mainClock.autoAdvance = true
             shell("settings put global animator_duration_scale $old")
+        }
+    }
+}
+
+class ExternalIntentRecreationTest {
+    @get:Rule val compose = createEmptyComposeRule()
+
+    @Test fun consumedExternalOpenIsNotReplayedAfterActivityRecreation() {
+        val intent = Intent(Intent.ACTION_VIEW,
+            Uri.parse("content://com.secure.textpad.qa.missing/file.txt"),
+            ApplicationProvider.getApplicationContext<android.content.Context>(), MainActivity::class.java)
+        ActivityScenario.launch<MainActivity>(intent).use { scenario ->
+            lateinit var model: PadViewModel
+            scenario.onActivity { model = ViewModelProvider(it)[PadViewModel::class.java] }
+            compose.waitUntil(15000) { model.notice != null && !model.busy }
+            compose.onNodeWithText("OK").performClick()
+            compose.runOnIdle { assertNull(model.notice) }
+            scenario.recreate()
+            compose.waitForIdle()
+            // Allow a wrongly replayed asynchronous URI request to report its error.
+            Thread.sleep(1000)
+            compose.runOnIdle {
+                assertNull("A consumed external intent must not be opened again", model.notice)
+                assertNull(model.editor)
+            }
         }
     }
 }
