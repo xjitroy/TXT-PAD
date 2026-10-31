@@ -77,6 +77,10 @@ jobs:
             gh release create "$TXT_TAG" --target main --draft --title "TXT ${TXT_TAG#v}" --notes-file RELEASE_NOTES.md
           fi
           gh release upload "$TXT_TAG" dist/TXT.apk dist/TXT.aab dist/release-metadata.json dist/SHA256SUMS --clobber
+      - name: Build the separate synthetic input helper
+        run: |
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          python3 tools/build-qa-input.py --out "$RUNNER_TEMP/txt-qa-input"
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -91,7 +95,7 @@ jobs:
           profile: pixel_2
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: python3 tools/release-smoke.py --apk dist/TXT.apk --out release-proof
+          script: python3 tools/release-smoke.py --apk dist/TXT.apk --out release-proof --input-helper ${{ runner.temp }}/txt-qa-input/TXT-qa-input.apk
       - name: Require successful source checks before publication
         timeout-minutes: 22
         env:

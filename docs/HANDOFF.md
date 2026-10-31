@@ -52,7 +52,8 @@ python3 tools/export-sources.py
 bash tools/android-qa.sh
 # With private signing inputs configured outside the repo:
 python3 tools/check-release.py dist/TXT.apk dist/TXT.aab --out dist/release-metadata.json
-python3 tools/release-smoke.py --apk dist/TXT.apk --out release-proof
+python3 tools/build-qa-input.py --out /tmp/TXT-qa-input
+python3 tools/release-smoke.py --apk dist/TXT.apk --out release-proof --input-helper /tmp/TXT-qa-input/TXT-qa-input.apk
 ```
 
 Start the next task by inspecting the current branch and release evidence, preserving user

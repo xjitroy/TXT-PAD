@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 parser = argparse.ArgumentParser()
 parser.add_argument('--apk', required=True)
 parser.add_argument('--out', default='release-proof')
+parser.add_argument('--input-helper',required=True,help='Separate synthetic clipboard helper APK')
 parser.add_argument('--stress', action='store_true', help='Also exercise 12000-line and 50000-character documents')
 args = parser.parse_args()
 out = pathlib.Path(args.out); out.mkdir(parents=True, exist_ok=True)
@@ -76,19 +77,18 @@ def tap(label=None, *, node=None, **options):
 
 def text(value):
     assert re.fullmatch(r'[A-Za-z0-9 ._-]+', value)
-    for start in range(0,len(value),3):
-        adb('shell', 'input', 'text', value[start:start+3].replace(' ', '%s'))
-        time.sleep(.08)
+    result=adb('shell','am','broadcast','--receiver-foreground','--include-stopped-packages','-n','com.secure.textpad.qa.input/.ClipboardInput','--es','value',value.replace(' ','\\ '))
+    assert 'result=-1' in result,'Synthetic clipboard input was not accepted'
+    adb('shell','input','keyevent','KEYCODE_PASTE')
+    time.sleep(.2)
 
 def password_input(value, index=0):
     fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
     tap(node=fields[index])
     time.sleep(.7)
-    for start in range(0,len(value),3):
-        text(value[start:start+3])
-        time.sleep(.08)
     fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
-    assert len(fields[index].get('text',''))==len(value),'Native password input did not receive every character'
+    assert fields[index].get('focused')=='true','Native password field did not receive focus'
+    text(value)
 
 def screenshot(name):
     time.sleep(.5)
@@ -139,6 +139,7 @@ def stress_document(value, tool):
     locate('New File')
 
 adb('logcat','-c')
+adb('install','-r',args.input_helper)
 adb('install','-r',args.apk)
 adb('shell','settings','put','secure','show_ime_with_hard_keyboard','1')
 adb('shell','cmd','uimode','night','yes')

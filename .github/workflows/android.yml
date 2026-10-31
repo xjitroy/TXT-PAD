@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths-ignore: ['docs/**', 'store/**', '**/*.md', 'VERIFICATION.json', 'release/verify-request.json', 'release/publish-request.json', 'tools/release-smoke.py', 'tools/stage-release.py', 'tools/package-public.py', '.github/workflows/publish-signed.yml', '.github/workflows/verify-release.yml', '.github/workflows/release.yml']
+    paths-ignore: ['docs/**', 'store/**', '**/*.md', 'VERIFICATION.json', 'release/verify-request.json', 'release/publish-request.json', 'tools/release-smoke.py', 'tools/build-qa-input.py', 'tools/qa-input/**', 'tools/stage-release.py', 'tools/package-public.py', '.github/workflows/publish-signed.yml', '.github/workflows/verify-release.yml', '.github/workflows/release.yml']
   pull_request:
 permissions:
   contents: read

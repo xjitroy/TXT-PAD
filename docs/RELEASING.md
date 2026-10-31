@@ -64,10 +64,15 @@ export TXT_PASSWORD_FILE=/private/path/keystore-password.txt
 export TXT_BUILD_TOOLS=/path/to/android-sdk/build-tools/36.0.0
 tools/sign-release.sh TXT-unsigned.apk TXT-unsigned.aab dist
 python3 tools/check-release.py dist/TXT.apk dist/TXT.aab --out dist/release-metadata.json
-python3 tools/release-smoke.py --apk dist/TXT.apk --out release-proof
+python3 tools/build-qa-input.py --out /tmp/TXT-qa-input
+python3 tools/release-smoke.py --apk dist/TXT.apk --out release-proof --input-helper /tmp/TXT-qa-input/TXT-qa-input.apk
 ```
 
 The script aligns/signs the APK and JAR-signs the AAB without password command-line arguments.
+The separate QA helper uses no network permission or TXT signing key. Its clipboard receiver
+requires Android DUMP permission, so only the test shell/system can call it. It sends synthetic
+fixture input atomically, as a password-manager paste would. Never run it on real vault data.
+
 Add `--stress` when changing text layout to include the long-document cases in the signed APK.
 Run on an empty test emulator, not a phone holding real vault data. Publish only after checks
 pass. A separate `Verify public signed APK` workflow can validate an already uploaded release.
