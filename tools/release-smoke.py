@@ -30,12 +30,14 @@ def tree():
 def bounds(node):
     return tuple(map(int, re.findall(r'\d+', node.attrib['bounds'])))
 
-def locate(label=None, *, edit=False, timeout=25, scroll=False):
+def locate(label=None, *, edit=False, timeout=25, scroll=False, resource=None):
     deadline = time.monotonic() + timeout
     swiped = False
     while time.monotonic() < deadline:
         root = tree()
         nodes = [n for n in root.iter('node') if
+                 n.get('enabled') != 'false' and
+                 (resource is None or n.get('resource-id', '').endswith('/'+resource)) and
                  (not edit or n.get('class') == 'android.widget.EditText') and
                  (label is None or label.casefold() in ((n.get('text') or '').casefold(), (n.get('content-desc') or '').casefold()))]
         nodes = [n for n in nodes if bounds(n)[2] > bounds(n)[0] and bounds(n)[3] > bounds(n)[1]]
@@ -107,23 +109,11 @@ with tempfile.TemporaryDirectory() as tmp:
     adb('push',str(fixture),'/sdcard/Documents/TXT-QA/TXT-release-check.txt')
 # Select the real workspace through SAF; no shell-granted URI permission shortcut.
 tap('Choose workspace folder')
-root=tree()
-rows=[n for n in root.iter('node') if n.get('text')=='Documents' and n.get('resource-id')=='android:id/title']
-if not rows:
-    tap('Show roots')
-    model=adb('shell','getprop','ro.product.model').strip()
-    root=tree()
-    candidates=[n for n in root.iter('node') if n.get('text') in {model,'Internal storage','Internal shared storage','Phone storage'}]
-    assert candidates,ET.tostring(root,encoding='unicode')
-    tap(node=candidates[0])
-    tap('Documents',scroll=True)
-else:
-    tap(node=rows[0])
-tap('TXT-QA',scroll=True)
+tap('Documents',scroll=True,timeout=45)
+tap('TXT-QA',scroll=True,timeout=45)
+locate('TXT-QA',resource='breadcrumb_text')
 tap('Use this folder')
-root=tree()
-allows=[n for n in root.iter('node') if (n.get('text') or '').casefold()=='allow']
-if allows:tap(node=allows[0])
+tap('Allow',timeout=25)
 locate('New File',timeout=45)
 external()
 locate('TXT-release-check.txt')
@@ -173,7 +163,6 @@ fixture=out/'workspace-check.txt';fixture.write_text('Workspace restore check',e
 adb('push',str(fixture),'/sdcard/Documents/TXT-QA/workspace-check.txt')
 tap('Backup');tap('Create full offline backup')
 locate(edit=True)
-tap('Show roots');tap('Downloads')
 picker_name=locate(edit=True).get('text')
 assert picker_name.startswith('TXT_Backup_') and picker_name.endswith('.tpbak')
 tap('Save')
