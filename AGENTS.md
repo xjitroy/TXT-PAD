@@ -16,7 +16,8 @@ The current public privacy statement is `PRIVACY.md`.
   random salt/IV generation, required final backup frame, staging/hash validation or path checks.
 - Vault/Trash are private app data. `.nomedia` is indexing suppression, not access control.
 - Passwords/sealed session credentials must not be written to disk. FLAG_SECURE must cover
-  passwords, encrypted documents and protected read/write transitions.
+  passwords, encrypted documents and protected read/write transitions,
+  encrypted page exit animations and the following safe frame.
 - Keep the permanent signing identity. Never generate a replacement key for an update.
   Never commit/upload private keys, keystore passwords, Actions secrets or signing recovery kits.
   Only the public certificate in `release/signing-certificate.pem` belongs in the repository.

@@ -52,7 +52,10 @@ manual main-branch workflow, removes the temporary key and verifies the pinned c
 
 ## Manual signing when secrets are unavailable
 
-`TXT checks` publishes a clearly marked unsigned candidate after both test jobs pass.
+`TXT checks` retains unsigned signing inputs and QA proof as Actions artifacts after both
+test jobs pass. It also attempts a clearly marked public unsigned candidate release. If
+GitHub integration permissions reject that optional publication, download the
+`TXT-signing-inputs-<run number>` artifact instead; the test results remain authoritative.
 Download its TXT-unsigned.apk, TXT-unsigned.aab and mapping.txt. Use JDK 17 and SDK build-tools 36:
 
 ```sh

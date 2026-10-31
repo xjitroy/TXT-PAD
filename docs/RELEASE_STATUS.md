@@ -1,9 +1,7 @@
 # TXT 1.1.0 release status
 
-The viewport-sized gutter and bounded long-line rendering are undergoing new regression checks. The previous source suite passed 26 cases per API; the new suite has 28 cases per API.
+The bounded editor passed 28 tests each on API 26 and 36 (56 total) in source run 41170550578. Unsigned candidate metadata publication hit a GitHub integration permission error.
 
-Previous verified source: `9867349e576165969fe71b7fa15176ee4bac593c`.
+Screenshot protection now also tracks the encrypted navigation transition and safe frame commit. A new regression test is being run with the source suite (29 cases per API). The private signing identity is unchanged.
 
-Signed APK checks are also exercising real persisted SAF selection, encrypted saves, Trash and both backup placement flags. Publication remains gated on passing source and signed-build checks.
-
-The private signing identity is unchanged and stays outside the public repository.
+The real signed APK flow is also being validated. Stable publication requires both source checks and signed APK checks to pass.

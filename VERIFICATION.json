@@ -50,21 +50,25 @@
     ]
   },
   "previous_green_emulator_suite": {
-    "source": "9867349e576165969fe71b7fa15176ee4bac593c",
-    "workflow_run": 41106969032,
-    "cases_per_api": 26,
+    "source": "42b77f089de23a2fc08036e12b556ec26aecb5df",
+    "workflow_run": 41170550578,
+    "cases_per_api": 28,
     "apis": [
       26,
       36
     ],
-    "note": "Historical baseline before the bounded viewport and long-line changes"
+    "note": "Both verification jobs passed all cases; optional unsigned candidate publication was rejected by GitHub integration permissions"
   },
   "signed_release_smoke": "PENDING: exact new signed APK, long-document stress, UTF-8 edits, password/vault/Trash and backup restore",
-  "release_status": "PENDING: viewport gutter and bounded long-line changes require a new green source run and signed APK validation",
+  "release_status": "PENDING: navigation screenshot-protection change requires a new source run and signed APK validation",
   "external_incident": "https://stspg.io/5cd2m4n59spv",
   "private_signing_key": "Owner-only recovery kit outside repository; public certificate only is published",
   "physical_devices": "not tested",
   "talkback": "not tested",
   "security_audit": "not independently audited",
-  "performance_120hz": "not measured"
+  "performance_120hz": "not measured",
+  "pending_security_regression": {
+    "expected_cases_per_api": 29,
+    "case": "Screenshot protection remains active across the encrypted editor exit animation and safe frame commit"
+  }
 }

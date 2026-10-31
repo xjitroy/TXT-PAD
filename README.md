@@ -116,7 +116,8 @@ Only its ciphertext remains between saves; transient mutable password buffers ar
 on use. The sealed token is cleared on document close and is never saved to disk. This
 supports auto-save after an explicit password unlock; it is not password recovery.
 FLAG_SECURE protects encrypted screens and password dialogs, including busy protected
-read/write transitions. Optional app lock is an access gate, not encryption at rest
+read/write transitions and the complete editor exit animation. The window remains protected
+until a safe frame has committed. Optional app lock is an access gate, not encryption at rest
 for plain files.
 
 Vault saves use fsync + same-directory atomic rename. SAF providers vary: updates use a

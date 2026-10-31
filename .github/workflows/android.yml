@@ -80,6 +80,7 @@ jobs:
           pattern: TXT-UI-api-*
           path: proof
       - name: Publish tested unsigned candidate for signing
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -91,3 +92,13 @@ jobs:
           tar -czf candidate/QA-proof.tar.gz -C candidate qa-proof
           sha256sum candidate/TXT-unsigned.apk candidate/TXT-unsigned.aab > candidate/SHA256SUMS
           gh release create "candidate-${{ github.run_number }}" --target "${{ github.sha }}" --prerelease --title "TXT tested signing candidate ${{ github.run_number }}" --notes 'Unsigned release APK/AAB after Android 8 and Android 16 checks. These are build inputs for signing, not the final install downloads. Use the stable versioned release for installation.' candidate/TXT-unsigned.apk candidate/TXT-unsigned.aab candidate/mapping.txt candidate/QA-proof.tar.gz candidate/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TXT-signing-inputs-${{ github.run_number }}
+          path: |
+            candidate/TXT-unsigned.apk
+            candidate/TXT-unsigned.aab
+            candidate/mapping.txt
+            candidate/QA-proof.tar.gz
+            candidate/SHA256SUMS

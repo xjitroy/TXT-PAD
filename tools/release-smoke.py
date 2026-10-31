@@ -75,7 +75,9 @@ def tap(label=None, *, node=None, **options):
 
 def text(value):
     assert re.fullmatch(r'[A-Za-z0-9 ._-]+', value)
-    adb('shell', 'input', 'text', value.replace(' ', '%s'))
+    for start in range(0,len(value),3):
+        adb('shell', 'input', 'text', value[start:start+3].replace(' ', '%s'))
+        time.sleep(.08)
 
 def password_input(value, index=0):
     fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
@@ -115,6 +117,9 @@ def check_raw(predicate, timeout=45):
         data=adb('exec-out','cat','/sdcard/Documents/TXT-QA/TXT-release-check.txt',binary=True)
         if predicate(data): return data
         time.sleep(.4)
+    (out/'failed-ui.xml').write_text(ET.tostring(tree(),encoding='unicode'))
+    print('Saved fixture bytes:',len(data),'prefix:',repr(data[:180]),flush=True)
+    print('Visible fixture UI:',[(n.get('text','')[:180],n.get('content-desc','')) for n in tree().iter('node') if n.get('text') or n.get('content-desc')],flush=True)
     raise AssertionError('Saved document bytes did not reach the expected state')
 
 def toggle_tool(label):
@@ -130,12 +135,13 @@ def stress_document(value, tool):
         fixture=pathlib.Path(tmp)/'TXT-release-check.txt'
         fixture.write_text(value,encoding='utf-8')
         adb('push',str(fixture),'/sdcard/Documents/TXT-QA/TXT-release-check.txt')
-    external();locate(edit=True,timeout=60)
+    external();locate('Back to files',timeout=60);locate(edit=True,timeout=60)
     tap('Tools ⋯');locate('Tools');toggle_tool(tool)
     if tool=='Word wrap':tap('Done',scroll=True)
     locate('Back to files',timeout=45)
     assert 'FATAL EXCEPTION' not in adb('logcat','-d','-b','crash')
     tap('Back to files')
+    locate('New File')
 
 adb('logcat','-c')
 adb('install','-r',args.apk)
@@ -165,8 +171,9 @@ with tempfile.TemporaryDirectory() as tmp:
     adb('push',str(fixture),'/sdcard/Documents/TXT-QA/TXT-release-check.txt')
 external()
 locate('TXT-release-check.txt')
-field=locate(edit=True)
+field=locate('Release check\nA clear page for your ideas.\nEverything stays on this device.\n',edit=True,timeout=45)
 tap(node=field)
+time.sleep(.7)
 adb('shell','input','keyevent','KEYCODE_MOVE_END')
 text('Release typing')
 wait_saved()

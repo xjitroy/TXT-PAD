@@ -1976,6 +1976,7 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import com.secure.textpad.ui.theme.GlassButton as Button
@@ -2005,6 +2006,8 @@ import com.secure.textpad.ui.theme.LocalGlassMotionEnabled
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 import com.secure.textpad.security.SessionPassword
 import java.security.KeyStore
 import java.security.SecureRandom
@@ -2244,10 +2247,29 @@ class MainActivity : FragmentActivity() {
         val exportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
             if (uri != null) { if (saveAsEncrypted) saveAsUri = uri else vm.saveAs(uri, null) }
         }
-        val secure = appLock || vm.savingProtected || saveAsUri != null || vm.busy || sensitive || vm.editor?.encrypted == true || vm.unlockFile != null || !unlocked || backupUri != null || restorePassword
+        val navigation = updateTransition(vm.editor, label = "document expansion")
+        val secure = appLock || vm.savingProtected || saveAsUri != null || vm.busy || sensitive ||
+            vm.editor?.encrypted == true || navigation.currentState?.encrypted == true || navigation.targetState?.encrypted == true ||
+            vm.unlockFile != null || !unlocked || backupUri != null || restorePassword
         SideEffect {
             if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-            else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        LaunchedEffect(secure) {
+            if (!secure) {
+                val decor = window.decorView
+                if (Build.VERSION.SDK_INT >= 29 && decor.isHardwareAccelerated) {
+                    suspendCancellableCoroutine<Unit> { continuation ->
+                        val observer = decor.viewTreeObserver
+                        val committed = Runnable { if (continuation.isActive) continuation.resume(Unit) }
+                        observer.registerFrameCommitCallback(committed)
+                        continuation.invokeOnCancellation { if (observer.isAlive) observer.unregisterFrameCommitCallback(committed) }
+                        decor.postInvalidateOnAnimation()
+                    }
+                }
+                withFrameNanos { }
+                withFrameNanos { }
+                window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
         }
         LaunchedEffect(incoming, unlocked, vm.busy, vm.saving) {
             val uri = incoming
@@ -2275,7 +2297,7 @@ class MainActivity : FragmentActivity() {
             return
         }
         val navigationMotion = LocalGlassMotionEnabled.current
-        AnimatedContent(targetState = vm.editor, contentKey = { it?.sessionId ?: "home" }, label = "document expansion",
+        navigation.AnimatedContent(contentKey = { it?.sessionId ?: "home" },
             transitionSpec = { if (!navigationMotion) EnterTransition.None.togetherWith(ExitTransition.None) else (fadeIn(tween(180)) + slideInVertically(animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.88f, stiffness = 420f), initialOffsetY = { it / 24 })).togetherWith(fadeOut(tween(120))) }) { doc ->
             if (doc == null && vm.showTrash) TrashScreen(vm.trash, vm.busy,
                 onBack = { vm.showTrash = false }, onRestore = vm::restoreTrash, onDelete = vm::deleteTrash)
