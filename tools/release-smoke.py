@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Drive the real, minified signed APK. All taps come from UI XML bounds."""
 import argparse
+import atexit
 import pathlib
 import re
 import subprocess
@@ -21,6 +22,17 @@ def adb(*parts, binary=False):
         print(result.stdout.decode('utf-8',errors='replace'),result.stderr.decode('utf-8',errors='replace'),flush=True)
         result.check_returncode()
     return result.stdout if binary else result.stdout.decode('utf-8', errors='replace')
+
+def collect_crash_log():
+    try:
+        result=subprocess.run(['adb','logcat','-d','-b','crash'],capture_output=True,timeout=10)
+        (out/'crash-log.txt').write_bytes(result.stdout)
+        if b'FATAL EXCEPTION' in result.stdout:
+            print(result.stdout.decode('utf-8',errors='replace'),flush=True)
+    except subprocess.TimeoutExpired:
+        pass
+
+atexit.register(collect_crash_log)
 
 def tree():
     adb('shell', 'uiautomator', 'dump', '/sdcard/txt-ui.xml')
@@ -95,6 +107,26 @@ def check_raw(predicate, timeout=45):
         time.sleep(.4)
     raise AssertionError('Saved document bytes did not reach the expected state')
 
+def toggle_tool(label):
+    item=locate(label,scroll=True)
+    y=(bounds(item)[1]+bounds(item)[3])//2
+    switches=[n for n in tree().iter('node') if n.get('checkable')=='true' and n.get('enabled')=='true']
+    control=min(switches,key=lambda n:abs((bounds(n)[1]+bounds(n)[3])//2-y))
+    assert abs((bounds(control)[1]+bounds(control)[3])//2-y)<48
+    tap(node=control)
+
+def stress_document(value, tool):
+    with tempfile.TemporaryDirectory() as tmp:
+        fixture=pathlib.Path(tmp)/'TXT-release-check.txt'
+        fixture.write_text(value,encoding='utf-8')
+        adb('push',str(fixture),'/sdcard/Documents/TXT-QA/TXT-release-check.txt')
+    external();locate(edit=True,timeout=60)
+    tap('Tools ⋯');toggle_tool(tool)
+    if tool=='Word wrap':tap('Done',scroll=True)
+    locate('Back to files',timeout=45)
+    assert 'FATAL EXCEPTION' not in adb('logcat','-d','-b','crash')
+    tap('Back to files')
+
 adb('logcat','-c')
 adb('install','-r',args.apk)
 adb('shell','settings','put','secure','show_ime_with_hard_keyboard','1')
@@ -115,6 +147,12 @@ locate('Files in TXT-QA',resource='header_title')
 tap('Use this folder')
 tap('Allow',timeout=25)
 locate('New File',timeout=45)
+stress_document('A line for scrolling.\n'*12000,'Line numbers')
+stress_document('A'*50000,'Word wrap')
+with tempfile.TemporaryDirectory() as tmp:
+    fixture=pathlib.Path(tmp)/'TXT-release-check.txt'
+    fixture.write_text('Release check\nA clear page for your ideas.\nEverything stays on this device.\n',encoding='utf-8')
+    adb('push',str(fixture),'/sdcard/Documents/TXT-QA/TXT-release-check.txt')
 external()
 locate('TXT-release-check.txt')
 field=locate(edit=True)
