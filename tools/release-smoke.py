@@ -140,10 +140,10 @@ hide_keyboard()
 # Native password inputs and authenticated save in the minified build.
 tap('Lock')
 locate('Lock this document')
-fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
-assert len(fields)==2
-for field in fields:
-    tap(node=field);text('release-check-password')
+for index in range(2):
+    fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
+    assert len(fields)==2
+    tap(node=fields[index]);text('release-check-password')
 tap('Continue')
 wait_saved();check_raw(lambda b:b.startswith(b'STXT'))
 # Close the editor using its named Back control, then require a password on re-open.
@@ -178,10 +178,10 @@ picker_name=locate(edit=True).get('text')
 assert picker_name.startswith('TXT_Backup_') and picker_name.endswith('.tpbak')
 tap('Save')
 locate('Backup master password')
-fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
-assert len(fields)==2
-for field in fields:
-    tap(node=field);text('master-release-password')
+for index in range(2):
+    fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
+    assert len(fields)==2
+    tap(node=fields[index]);text('master-release-password')
 tap('Continue')
 locate('Offline backup created. Keep it and its master password safe.',timeout=60);tap('OK')
 paths=adb('shell','find','/sdcard/Download','/sdcard/Documents','-name',picker_name).strip().splitlines()
