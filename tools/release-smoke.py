@@ -111,7 +111,7 @@ with tempfile.TemporaryDirectory() as tmp:
 tap('Choose workspace folder')
 tap('Documents',scroll=True,timeout=45)
 tap('TXT-QA',scroll=True,timeout=45)
-locate('TXT-QA',resource='breadcrumb_text')
+locate('Files in TXT-QA',resource='header_title')
 tap('Use this folder')
 tap('Allow',timeout=25)
 locate('New File',timeout=45)
