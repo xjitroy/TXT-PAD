@@ -1544,6 +1544,7 @@ import com.secure.textpad.ui.theme.GlassFilterChip as FilterChip
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.clipToBounds
 import com.secure.textpad.ui.theme.GlassStyle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -1785,16 +1786,15 @@ fun EditorScreen(
         }
         Box(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp).liquidGlass(style = GlassStyle.Writing).padding(horizontal = 18.dp, vertical = 20.dp)
             .testTag("editor.viewport").onSizeChanged { viewport = it }) {
-            Row(Modifier.fillMaxWidth().verticalScroll(vertical).padding(bottom = 40.dp)) {
+            Row(Modifier.fillMaxSize()) {
                 if (numbers) {
                     val text = doc.value.text
                     val starts = remember(text) { buildList { add(0); text.forEachIndexed { i, c -> if (c == '\n') add(i + 1) } } }
-                    val height = with(density) { (layout?.size?.height ?: 0).toDp() }
                     val paint = remember(gutterColor, size, density) { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                         color = gutterColor.toArgb(); textSize = with(density) { size.sp.toPx() }; typeface = android.graphics.Typeface.MONOSPACE
                     } }
                     val numberWidth = with(density) { paint.measureText(starts.size.toString()).toDp() } + 12.dp
-                    Canvas(Modifier.width(numberWidth.coerceAtLeast(40.dp)).height(height).testTag("editor.gutter")) {
+                    Canvas(Modifier.width(numberWidth.coerceAtLeast(40.dp)).fillMaxHeight().clipToBounds().testTag("editor.gutter")) {
                         layout?.let { l ->
                             val top = vertical.value.toFloat()
                             val firstLine = l.getLineForVerticalPosition(top.coerceAtLeast(0f))
@@ -1803,16 +1803,17 @@ fun EditorScreen(
                             while (index < starts.size) {
                                 val line = l.getLineForOffset(starts[index].coerceAtMost(text.length))
                                 if (l.getLineTop(line) > top + viewport.height + 80) break
-                                drawContext.canvas.nativeCanvas.drawText((index + 1).toString(), 0f, l.getLineBaseline(line), paint)
+                                drawContext.canvas.nativeCanvas.drawText((index + 1).toString(), 0f, l.getLineBaseline(line) - top, paint)
                                 index++
                             }
                         }
                     }
                 }
-                Box(Modifier.weight(1f).onSizeChanged { fieldWidth = it.width }
+                Box(Modifier.weight(1f).fillMaxHeight().verticalScroll(vertical).padding(bottom = 40.dp)) {
+                Box(Modifier.fillMaxWidth().onSizeChanged { fieldWidth = it.width }
                     .then(if (!wrap) Modifier.horizontalScroll(horizontal) else Modifier)) {
                     BasicTextField(value = doc.value, onValueChange = { doc.edit(it) },
-                        modifier = Modifier.fillMaxWidth().widthIn(min = with(density) { fieldWidth.toDp() }).focusRequester(focus).defaultMinSize(minHeight = 240.dp).testTag("editor.input"),
+                        modifier = Modifier.fillMaxWidth().widthIn(min = with(density) { fieldWidth.toDp() }, max = with(density) { 32760.toDp() }).focusRequester(focus).defaultMinSize(minHeight = 240.dp).testTag("editor.input"),
                         readOnly = busy, textStyle = textStyle, cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                         onTextLayout = { layout = it },
                         decorationBox = { input ->
@@ -1827,6 +1828,7 @@ fun EditorScreen(
                                 input()
                             }
                         })
+                }
                 }
             }
         }

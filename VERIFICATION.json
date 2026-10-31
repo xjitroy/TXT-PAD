@@ -60,11 +60,18 @@
     "note": "Historical baseline; final source is verified by workflow 41106969032"
   },
   "signed_release_smoke": "PENDING: exact signed APK UI, file grants, passwords, vault, Trash and backup restore",
-  "release_status": "Source and local signed artifacts verified; signed APK smoke and stable publication pending",
+  "release_status": "PENDING: viewport gutter and bounded long-line changes require a new green source run and signed APK validation",
   "external_incident": "https://stspg.io/5cd2m4n59spv",
   "private_signing_key": "Owner-only recovery kit outside repository; public certificate only is published",
   "physical_devices": "not tested",
   "talkback": "not tested",
   "security_audit": "not independently audited",
-  "performance_120hz": "not measured"
+  "performance_120hz": "not measured",
+  "pending_editor_regression": {
+    "expected_cases_per_api": 28,
+    "cases": [
+      "12000-line gutter and final caret visibility",
+      "50000-character unwrapped code line, unchanged text and reachable final caret"
+    ]
+  }
 }

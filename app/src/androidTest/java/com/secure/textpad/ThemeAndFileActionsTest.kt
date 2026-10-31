@@ -247,6 +247,46 @@ class ThemeAndFileActionsTest {
         compose.waitForIdle()
         assertCaretInsideViewport(document)
     }
+    @Test fun twelveThousandLinesKeepTheGutterAndLastCaretVisible() {
+        val text = (1..12000).joinToString("\n") { "Line $it — বাংলা" }
+        val document = EditorDocument(sample, text, false).apply { select(text.length, text.length) }
+        compose.setContent {
+            LiquidGlassTheme(animateBackdrop = false) {
+                EditorScreen(document, false, onBack = {}, onSave = { _, _ -> }, onMove = {}, onSaveAs = { _, _ -> }, onSensitivePrompt = {})
+            }
+        }
+        compose.onNodeWithText("Tools ⋯").performClick()
+        compose.onNodeWithTag("editor.lineNumbers").performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag("editor.gutter").assertIsDisplayed()
+        val gutter = compose.onNodeWithTag("editor.gutter").fetchSemanticsNode().boundsInRoot
+        val viewport = compose.onNodeWithTag("editor.viewport").fetchSemanticsNode().boundsInRoot
+        assertTrue("Gutter is limited to the visible writing area", gutter.height <= viewport.height)
+        assertEquals(text, document.value.text)
+        assertCaretInsideViewport(document)
+        capture("editor-long-document")
+    }
+    @Test fun fiftyThousandCharacterCodeLineStaysEditableWithoutWrappingFailure() {
+        val text = "const data = \"" + "a".repeat(50000) + "\";"
+        val document = EditorDocument(sample, text, false).apply { select(text.length, text.length) }
+        compose.setContent {
+            LiquidGlassTheme(animateBackdrop = false) {
+                EditorScreen(document, false, onBack = {}, onSave = { _, _ -> }, onMove = {}, onSaveAs = { _, _ -> }, onSensitivePrompt = {})
+            }
+        }
+        compose.onNodeWithText("Tools ⋯").performClick()
+        compose.onNodeWithTag("editor.wordWrap").performScrollTo().performClick()
+        compose.onNodeWithTag("editor.lineNumbers").performScrollTo().performClick()
+        compose.waitForIdle()
+        assertEquals(text, document.value.text)
+        assertCaretInsideViewport(document)
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithTag("editor.input").performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        val field = compose.onNodeWithTag("editor.input").fetchSemanticsNode()
+        val viewport = compose.onNodeWithTag("editor.viewport").fetchSemanticsNode().boundsInRoot
+        val caret = layouts.single().getCursorRect(text.length).translate(field.positionInRoot)
+        assertTrue("The end of a very long line remains reachable", caret.left >= viewport.left && caret.right <= viewport.right)
+    }
     @Test fun typingContinuesWhileAnAutoSaveIsRunning() {
         val document = EditorDocument(sample, "Note", false)
         compose.setContent {

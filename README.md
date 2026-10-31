@@ -90,7 +90,10 @@ Missing final frames, chunk reorder, changed flags, damaged tags and trailing by
 ZIP entries are indexed names, with validated original paths in manifest.json; traversal,
 duplicate paths, duplicate entries, size/hash mismatches and unsupported versions fail.
 
-Editor input is bounded to 12 MiB encoded and 2 million UTF-16 code units. Undo history
+Editor input is bounded to 12 MiB encoded and 2 million UTF-16 code units. The editor
+uses a gutter sized to the visible viewport. Exceptionally long unwrapped lines continue
+visually at 32,760 physical pixels to stay within Android layout limits; text is unchanged.
+Undo history
 is bounded to 100 steps / approximately 16 MiB of retained text. Search is capped at 10,000
 matches, has a time budget, and uses literal replacement text even in regex mode.
 Backup payload memory uses bounded buffers, with a manifest limited to 10,000 files.

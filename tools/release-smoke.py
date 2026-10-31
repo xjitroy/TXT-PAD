@@ -44,7 +44,7 @@ def bounds(node):
 
 def locate(label=None, *, edit=False, timeout=25, scroll=False, resource=None):
     deadline = time.monotonic() + timeout
-    swiped = False
+    swipes = 0
     while time.monotonic() < deadline:
         root = tree()
         nodes = [n for n in root.iter('node') if
@@ -55,12 +55,12 @@ def locate(label=None, *, edit=False, timeout=25, scroll=False, resource=None):
         nodes = [n for n in nodes if bounds(n)[2] > bounds(n)[0] and bounds(n)[3] > bounds(n)[1]]
         if nodes:
             return nodes[0]
-        if scroll and not swiped:
+        if scroll and swipes < 5:
             scrolls = [n for n in root.iter('node') if n.get('scrollable') == 'true']
             if scrolls:
                 x1, y1, x2, y2 = bounds(max(scrolls, key=lambda n: bounds(n)[3]-bounds(n)[1]))
                 adb('shell', 'input', 'swipe', str((x1+x2)//2), str((y1+3*y2)//4), str((3*y1+y2)//4), '350')
-                swiped = True
+                swipes += 1
         time.sleep(.3)
     failed=ET.tostring(tree(), encoding='unicode')
     (out/'failed-ui.xml').write_text(failed)
@@ -76,6 +76,16 @@ def tap(label=None, *, node=None, **options):
 def text(value):
     assert re.fullmatch(r'[A-Za-z0-9 ._-]+', value)
     adb('shell', 'input', 'text', value.replace(' ', '%s'))
+
+def password_input(value, index=0):
+    fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
+    tap(node=fields[index])
+    time.sleep(.7)
+    for start in range(0,len(value),3):
+        text(value[start:start+3])
+        time.sleep(.08)
+    fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
+    assert len(fields[index].get('text',''))==len(value),'Native password input did not receive every character'
 
 def hide_keyboard():
     state = adb('shell', 'dumpsys', 'input_method')
@@ -121,7 +131,7 @@ def stress_document(value, tool):
         fixture.write_text(value,encoding='utf-8')
         adb('push',str(fixture),'/sdcard/Documents/TXT-QA/TXT-release-check.txt')
     external();locate(edit=True,timeout=60)
-    tap('Tools ⋯');toggle_tool(tool)
+    tap('Tools ⋯');locate('Tools');toggle_tool(tool)
     if tool=='Word wrap':tap('Done',scroll=True)
     locate('Back to files',timeout=45)
     assert 'FATAL EXCEPTION' not in adb('logcat','-d','-b','crash')
@@ -169,19 +179,18 @@ hide_keyboard()
 tap('Lock')
 locate('Lock this document')
 for index in range(2):
-    fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
-    assert len(fields)==2
-    tap(node=fields[index]);text('release-check-password')
+    password_input('release-check-password',index)
 tap('Continue')
 wait_saved();check_raw(lambda b:b.startswith(b'STXT'))
 # Close the editor using its named Back control, then require a password on re-open.
 tap('Back to files')
 external();locate('Unlock TXT-release-check.txt')
-tap(edit=True);text('release-check-password');tap('Continue')
+password_input('release-check-password');tap('Continue')
 wait_saved()
 assert 'Release typing' in ET.tostring(tree(),encoding='unicode')
 hide_keyboard()
 tap('Tools ⋯',scroll=True)
+locate('Tools')
 tap('Isolate from other apps',scroll=True)
 locate('Moved to private vault.');tap('OK')
 tap('Back to files')
@@ -206,9 +215,7 @@ assert picker_name.startswith('TXT_Backup_') and picker_name.endswith('.tpbak')
 tap('Save')
 locate('Backup master password')
 for index in range(2):
-    fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
-    assert len(fields)==2
-    tap(node=fields[index]);text('master-release-password')
+    password_input('master-release-password',index)
 tap('Continue')
 locate('Offline backup created. Keep it and its master password safe.',timeout=60);tap('OK')
 paths=adb('shell','find','/sdcard/Download','/sdcard/Documents','-name',picker_name).strip().splitlines()
@@ -220,7 +227,7 @@ try:
 except AssertionError:
     tap('Show roots');tap('Downloads');tap(picker_name,scroll=True)
 locate('Restore offline backup');tap('Enter master password')
-tap(edit=True);text('master-release-password');tap('Continue')
+password_input('master-release-password');tap('Continue')
 locate('Restored 2 files. Skipped 0.',timeout=60);tap('OK')
 with tempfile.TemporaryDirectory() as tmp:
     copy=pathlib.Path(tmp)/'workspace-restored.txt'
@@ -229,7 +236,7 @@ with tempfile.TemporaryDirectory() as tmp:
 locate('TXT-release-check (1).txt',scroll=True)
 tap('TXT-release-check (1).txt')
 locate('Unlock TXT-release-check (1).txt')
-tap(edit=True);text('release-check-password');tap('Continue')
+password_input('release-check-password');tap('Continue')
 wait_saved()
 assert 'Release typing' in ET.tostring(tree(),encoding='unicode')
 tap('Back to files')
